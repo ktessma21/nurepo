@@ -1,0 +1,17 @@
+build:
+	rm -f ./a.out
+	gcc -std=c11 -g -Wall main.c -lm -Wno-unused-variable -Wno-unused-function
+
+run:
+	./a.out
+
+valgrind:
+	rm -f ./a.out
+	gcc -std=c11 -g -Wall main.c -lm -Wno-unused-variable -Wno-unused-function
+	valgrind --tool=memcheck --leak-check=full ./a.out
+
+
+# ofiles:
+# 	rm -f *.o
+# 	gcc -std=c11 -g -c -Wall scanner.c
+# 	gcc -std=c11 -g -c -Wall tokenqueue.c

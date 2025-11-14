@@ -1,0 +1,4 @@
+All TODODs
+
+1, Compare two git. Who is ahead? Who is behind? It's just proper traversing of a linkedlist
+2. 
