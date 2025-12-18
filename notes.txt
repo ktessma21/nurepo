@@ -1,4 +1,9 @@
 All TODODs
 
 1, Compare two git. Who is ahead? Who is behind? It's just proper traversing of a linkedlist
-2. 
+2. Git branch -- more interesting thing 
+
+
+
+Companion Doc :
+https://docs.google.com/document/d/1xhuaL8gBADMNCuW6zhkaLUoClhD53c35xbNW0dhnZCE/edit?usp=sharing
