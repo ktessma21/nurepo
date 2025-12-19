@@ -1,9 +1,31 @@
-All TODODs
+- All blobs, trees and commits are objects: so they have sha number and found under objects. 
+- each commit file has a tree pointing too. but not necessary for it to have a blob
+- each commit sha number is different for different commits. 
+    - each tree and blob sha number is the same for different
 
-1, Compare two git. Who is ahead? Who is behind? It's just proper traversing of a linkedlist
-2. Git branch -- more interesting thing 
+
+
+- let them have adjacent consistent git_repo that updates the content side to side. 
+
+
+
 
 
 
 Companion Doc :
 https://docs.google.com/document/d/1xhuaL8gBADMNCuW6zhkaLUoClhD53c35xbNW0dhnZCE/edit?usp=sharing
+
+
+great video :
+https://www.youtube.com/watch?v=52MFjdGH20o
+
+
+
+- functions to look into 
+: git cat-file -p or -t 
+: git hash-object
+: git write-tree
+: git commit-tree 
+
+
+
