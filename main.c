@@ -11,7 +11,7 @@
 int main() {
 
 
-    const char *dir = "testrepo/.git";
+    const char *dir = ".git";
 
  
     if (detect_repo_hash(dir) == HASH_SHA1){

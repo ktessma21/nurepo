@@ -5,6 +5,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 static int ieq(const char *a, const char *b)
 {
@@ -22,50 +23,89 @@ static hash_algo_t detect_repo_hash_from_config(FILE *f)
 {
     char line[512];
     int in_extensions = 0;
+    bool interesting_line = false;
 
     while (fgets(line, sizeof(line), f)) {
-        char *p = line;
+        // printf("%s", line);
 
-        /* skip leading whitespace */
-        while (isspace((unsigned char)*p))
-            p++;
+        /* indented line */
+        if (*line == '\t') {
+            // printf("check again");
 
-        /* comments / empty lines */
-        if (*p == '#' || *p == ';' || *p == '\0')
-            continue;
+            if (!interesting_line) {
+                continue;
+            }
 
-        /* section */
-        if (*p == '[') {
-            in_extensions = strcasecmp(p, "[extensions]", 12) == 0;
-            continue;
-        }
+            /* remove trailing newline */
+            // line[strcspn(line, "\n")] = 0;
 
-        if (!in_extensions)
-            continue;
+            /* skip leading spaces */
+            char *p = line;
+            while (*p == ' ')
+                p++;
 
-        char *eq = strchr(p, '=');
-        if (!eq)
-            continue;
+            /* find '=' */
+            printf("key %s", p);
+            char *eq = strchr(p, '=');
+            if (!eq)
+                continue;
 
-        *eq++ = '\0';
+            /* split key and value */
+            *eq = '\0';
 
-        /* trim key */
-        char *end = p + strlen(p);
-        while (end > p && isspace((unsigned char)end[-1]))
-            *--end = '\0';
+            /* trim trailing spaces from key */
+            char *key_end = eq - 1;
+            while (key_end > p && *key_end == ' ')
+                *key_end-- = '\0';
 
-        /* trim value */
-        while (isspace((unsigned char)*eq))
-            eq++;
+            /* value starts after '=' */
+            char *value = eq + 1;
 
-        if (strcasecmp(p, "objectformat") == 0) {
-            if (strcasecmp(eq, "sha256") == 0)
+            /* skip leading spaces in value */
+            while (*value == ' ')
+                value++;
+
+            /* remove trailing newline from value */
+            value[strcspn(value, "\n")] = '\0';
+
+            /* now p is key, value is value */
+            if (strcmp(p, "\tobjectformat") != 0) // biggest formatting problem is they use \t for \tab
+                continue;
+
+            if (strcmp(value, "sha256") == 0)
                 return HASH_SHA256;
+
+            printf("key %s", p);
+            printf("value %s", value);
+
             return HASH_SHA1;
+
         }
+
+        /* non-indented line → section header */
+
+        interesting_line = false;
+
+        /* find closing bracket */
+        char *c = line;
+        while (*c && *c != ']')
+            c++;
+
+        if (*c != ']')
+            continue;
+
+        *c = 0;  /* terminate at ']' */
+
+        char *str = line + 1;  /* skip '[' */
+
+        if (strcmp(str, "extensions") == 0){
+            interesting_line = true;
+            
+        }
+            
     }
 
-    return HASH_SHA1;
+    return DEFAULT_HASH_ALGO;
 }
 
 
