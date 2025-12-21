@@ -52,6 +52,7 @@
 // 	repo_set_hash_algo(repo, algo);
 // }
 
+
 // void initialize_repository(struct repository *repo)
 // {
 // 	repo->remote_state = remote_state_new();
@@ -180,10 +181,6 @@
 // 			repo->gitdir, "index");
 // }
 
-// void repo_set_hash_algo(struct repository *repo, int hash_algo)
-// {
-// 	repo->hash_algo = &hash_algos[hash_algo];
-// }
 
 // void repo_set_compat_hash_algo(struct repository *repo, int algo)
 // {
@@ -259,10 +256,7 @@ int repo_init_gitdir(struct repository *repo, const char *gitdir)
 void repo_set_worktree(struct repository *repo, const char *path)
 {
 	repo->worktree = real_pathdup(path, 1);
-
-	trace2_def_repo(repo);
 }
-
 
 
 /*
@@ -278,7 +272,7 @@ int repo_init(struct repository *repo,
 	if (repo_init_gitdir(repo, gitdir))
 		goto error;
 
-	repo_set_hash_algo(repo, detect_repo_hash(gitdir));  // working so far 
+	repo->hash_algo = detect_repo_hash(gitdir); // set the appropriate hash_algo
 
 	if (worktree)
 		repo_set_worktree(repo, worktree);
