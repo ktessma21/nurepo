@@ -3,23 +3,31 @@
 
 
 
+
 #include <stdio.h>
-#include "hash.h"
+#include "repository.h"
 
+int main(void)
+{
+    struct repository repo;
+    const char *gitdir = "./testrepo/.git";
 
-
-int main() {
-
-
-    const char *dir = ".git";
-
- 
-    if (detect_repo_hash(dir) == HASH_SHA1){
-        printf("hash_sha1");
-        return 0;
+    if (repo_init(&repo, gitdir, NULL) != 0) {
+        printf("repo_init failed\n");
+        return 1;
     }
-    printf("success \n");
 
+    printf("repo_init succeeded\n");
+    printf("gitdir    : %s\n", repo.gitdir);
 
+    if (repo.hash_algo == HASH_SHA1)
+        printf("hash algo : SHA1\n");
+    else if (repo.hash_algo == HASH_SHA256)
+        printf("hash algo : SHA256\n");
+    else
+        printf("hash algo : UNKNOWN\n");
+
+    repo_clear(&repo);
     return 0;
 }
+

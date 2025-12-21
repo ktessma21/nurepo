@@ -1,6 +1,6 @@
 build:
 	rm -f ./a.out
-	gcc -std=c11 -g -Wall main.c hash.c utl.c -lcrypto -lm -Wno-unused-variable -Wno-unused-function
+	gcc -std=c11 -g -Wall main.c hash.c repository.c utl.c -lcrypto -lm -Wno-unused-variable -Wno-unused-function
 
 run:
 	./a.out

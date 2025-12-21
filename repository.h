@@ -10,9 +10,8 @@ struct object_database;
  * - single repository
  * - single worktree
  * - SHA-1 only (for now)
- * - no submodules
- * - no alternates
- * - no index (yet)
+ * - submodules : we may add submodules to be tricky and to have some recursive calls. 
+ * - staging area or index : we may also wanna add index 
  */
 struct repository {
 	/* Path to .git directory */
@@ -22,10 +21,17 @@ struct repository {
 	char *worktree;
 
 	/* Object storage (.git/objects, packfiles) */
-	struct object_database *objects;
+	struct object_database *objects;    /// we will think about it 
+
+	// we need a HEAD : if properly set will point to the correct 
+
+	// we may also wanna add index 
+
+	// we may add submodules to be tricky and to have some recursive calls. 
 
 	/* Hash algorithm (SHA-1) */
-	const struct git_hash_algo *hash_algo;
+	hash_algo_t hash_algo;
+
 };
 
 /* Repository lifecycle */
@@ -38,4 +44,4 @@ void repo_clear(struct repository *repo);
 /* Simple accessors */
 const char *repo_gitdir(struct repository *repo);
 const char *repo_worktree(struct repository *repo);
-const char *repo_object_dir(struct repository *repo);
+// const char *repo_object_dir(struct repository *repo);
