@@ -1,0 +1,3 @@
+#!/bin/sh.  chmod +x run
+docker run -it --rm -v "`pwd`:/workspace" nurepo
+

@@ -1,11 +1,25 @@
+
+
+
+
+
 #include <stdio.h>
-#include <stdbool.h>
-#include <time.h>
+#include "hash.h"
 
 
 
+int main() {
 
-int main(){
 
-    printf("num %d \n", 10);
+    const char *dir = "testrepo/.git";
+
+ 
+    if (detect_repo_hash(dir) == HASH_SHA1){
+        printf("hash_sha1");
+        return 0;
+    }
+    printf("success \n");
+
+
+    return 0;
 }
