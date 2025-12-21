@@ -203,6 +203,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include "hash.c"
 
 static int is_porcelain_repo(const char *gitdir)
 {
@@ -277,8 +278,7 @@ int repo_init(struct repository *repo,
 	if (repo_init_gitdir(repo, gitdir))
 		goto error;
 
-	/* Porcelain minimum: SHA-1 only */
-	repo_set_hash_algo(repo, HASH_SHA1);
+	repo_set_hash_algo(repo, detect_repo_hash(gitdir));  // working so far 
 
 	if (worktree)
 		repo_set_worktree(repo, worktree);
@@ -291,52 +291,7 @@ error:
 }
 
 
-int repo_submodule_init(struct repository *subrepo,
-			struct repository *superproject,
-			const char *path,
-			const struct object_id *treeish_name)
-{
-	struct strbuf gitdir = STRBUF_INIT;
-	struct strbuf worktree = STRBUF_INIT;
-	int ret = 0;
 
-	repo_worktree_path_append(superproject, &gitdir, "%s/.git", path);
-	repo_worktree_path_append(superproject, &worktree, "%s", path);
-
-	if (repo_init(subrepo, gitdir.buf, worktree.buf)) {
-		/*
-		 * If initialization fails then it may be due to the submodule
-		 * not being populated in the superproject's worktree.  Instead
-		 * we can try to initialize the submodule by finding it's gitdir
-		 * in the superproject's 'modules' directory.  In this case the
-		 * submodule would not have a worktree.
-		 */
-		const struct submodule *sub =
-			submodule_from_path(superproject, treeish_name, path);
-		if (!sub) {
-			ret = -1;
-			goto out;
-		}
-
-		strbuf_reset(&gitdir);
-		submodule_name_to_gitdir(&gitdir, superproject, sub->name);
-
-		if (repo_init(subrepo, gitdir.buf, NULL)) {
-			ret = -1;
-			goto out;
-		}
-	}
-
-	subrepo->submodule_prefix = xstrfmt("%s%s/",
-					    superproject->submodule_prefix ?
-					    superproject->submodule_prefix :
-					    "", path);
-
-out:
-	strbuf_release(&gitdir);
-	strbuf_release(&worktree);
-	return ret;
-}
 
 // static void repo_clear_path_cache(struct repo_path_cache *cache)
 // {
