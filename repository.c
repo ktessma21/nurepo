@@ -4,7 +4,13 @@
 #include "hash.h"
 
 // }
+
+// Source - https://stackoverflow.com/a
+// Posted by alk, modified by community. See post 'Timeline' for change history
+// Retrieved 2025-12-21, License - CC BY-SA 4.0
+
 #define _POSIX_C_SOURCE 200809L
+
 #include <string.h>
 #include <stdlib.h>
 #include <sys/stat.h>

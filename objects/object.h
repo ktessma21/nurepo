@@ -1,7 +1,141 @@
 #ifndef OBJECT_H
 #define OBJECT_H
 
-#include "hash.h"
+#include <stddef.h>
+#include <openssl/sha.h>
+
+/*
+ * ============================================================
+ * Object ID (content address)
+ * ============================================================
+ */
+
+/* Max hash size we support (SHA-256) */
+#define MAX_OBJECT_ID_LENGTH SHA256_DIGEST_LENGTH
+
+struct object_id {
+    unsigned char hash[MAX_OBJECT_ID_LENGTH];
+};
+
+/*
+ * ============================================================
+ * Object types (Git-like)
+ * ============================================================
+ */
+
+enum object_type {
+    OBJ_NONE   = 0,
+    OBJ_COMMIT = 1,
+    OBJ_TREE   = 2,
+    OBJ_BLOB   = 3,
+    OBJ_TAG    = 4
+};
+
+/*
+ * ============================================================
+ * Object flags (in-memory traversal / state)
+ * ============================================================
+ */
+
+enum object_flags {
+    OBJ_FLAG_NONE   = 0,
+    OBJ_FLAG_SEEN   = 1 << 0,
+    OBJ_FLAG_MARKED = 1 << 1,
+    OBJ_FLAG_BAD    = 1 << 2
+};
+
+/*
+ * ============================================================
+ * Object payloads (type-specific data)
+ * ============================================================
+ */
+
+/* ---------- Blob ---------- */
+struct blob_object {
+    size_t size;
+    void *data;
+};
+
+/* ---------- Tree ---------- */
+struct tree_entry {
+    char *name;
+    enum object_type type;   /* blob or tree */
+    struct object_id oid;
+};
+
+struct tree_object {
+    size_t entry_count;
+    struct tree_entry *entries;
+};
+
+/* ---------- Commit ---------- */
+struct commit_object {
+    struct object_id tree;
+    struct object_id *parents;
+    size_t parent_count;
+    char *author;
+    char *message;
+};
+
+/* ---------- Tag ---------- */
+struct tag_object {
+    struct object_id target;
+    enum object_type target_type;
+    char *tag_name;
+    char *tagger;
+    char *message;
+};
+
+/*
+ * ============================================================
+ * Unified object (tagged union)
+ * ============================================================
+ */
+
+struct object {
+    enum object_type type;      /* what kind of object */
+    unsigned flags;             /* OBJ_FLAG_* */
+    struct object_id oid;       /* content hash */
+
+    union {
+        struct blob_object   *blob;
+        struct tree_object   *tree;
+        struct commit_object *commit;
+        struct tag_object    *tag;
+    } as;
+};
+
+/*
+ * ============================================================
+ * Object store (OID → object index)
+ * ============================================================
+ *
+ * This prevents O(N^2) scans and enables graph traversal.
+ */
+
+struct object_store_entry {
+    struct object_id oid;
+    struct object *obj;
+};
+
+struct object_store {
+    struct object_store_entry *entries;
+    size_t count;
+    size_t capacity;
+};
+
+/* Object store API */
+struct object_store *object_store_new(void);
+void object_store_free(struct object_store *store);
+
+struct object *object_store_lookup(struct object_store *store,
+                                   const struct object_id *oid);
+
+int object_store_insert(struct object_store *store,
+                        struct object *obj);
+
+#endif /* OBJECT_H */
+
 
 // struct buffer_slab;
 // struct repository;
@@ -153,21 +287,7 @@
 // }
 
 
-#define GIT_SHA256_RAWSZ 32
-#define GIT_MAX_RAWSZ GIT_SHA256_RAWSZ
 
-struct object_id {
-	unsigned char hash[GIT_MAX_RAWSZ];
-}
-/*
- * The object type is stored in 3 bits.
- */
-struct object {
-	unsigned parsed : 1;
-	unsigned type : TYPE_BITS;
-	unsigned flags : FLAG_BITS;
-	struct object_id oid;
-};
 
 // const char *type_name(unsigned int type);
 // int type_from_string_gently(const char *str, ssize_t, int gentle);
@@ -360,4 +480,3 @@ struct object {
 //  */
 // void repo_clear_commit_marks(struct repository *r, unsigned int flags);
 
-// #endif /* OBJECT_H */

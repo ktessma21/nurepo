@@ -6,18 +6,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <openssl/sha.h>
 
-static int ieq(const char *a, const char *b)
-{
-    while (*a && *b) {
-        if (tolower((unsigned char)*a) !=
-            tolower((unsigned char)*b))
-            return 0;
-        a++;
-        b++;
-    }
-    return *a == *b;
-}
 
 static hash_algo_t detect_repo_hash_from_config(FILE *f)
 {
@@ -133,4 +123,17 @@ hash_algo_t detect_repo_hash(const char *gitdir)
     fclose(f);
     free(fname);
     return hashf;
+}
+
+
+void generate_sha256(const void *data, size_t len,
+                     unsigned char out[SHA256_DIGEST_LENGTH])
+{
+    SHA256((const unsigned char *)data, len, out);
+}
+
+void generate_sha1(const void *data, size_t len,
+                     unsigned char out[SHA_DIGEST_LENGTH])
+{
+    SHA1((const unsigned char *)data, len, out);
 }
