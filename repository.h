@@ -1,6 +1,6 @@
 #include "hash.h"
+#include "object.h"
 
-struct object_database;
 
 
 /*
@@ -12,6 +12,7 @@ struct object_database;
  * - SHA-1 only (for now)
  * - submodules : we may add submodules to be tricky and to have some recursive calls. 
  * - staging area or index : we may also wanna add index 
+ * - dangling cached objects - temporarily stored 
  */
 struct repository {
 	/* Path to .git directory */
@@ -32,6 +33,12 @@ struct repository {
 	/* Hash algorithm (SHA-1) */
 	hash_algo_t hash_algo;
 
+	struct object *all_objects;
+
+
+
+
+
 };
 
 /* Repository lifecycle */
@@ -39,9 +46,7 @@ int repo_init(struct repository *repo,
               const char *gitdir,
               const char *worktree);
 
+
 void repo_clear(struct repository *repo);
 
-/* Simple accessors */
-const char *repo_gitdir(struct repository *repo);
-const char *repo_worktree(struct repository *repo);
-// const char *repo_object_dir(struct repository *repo);
+void repo_parse_objects(struct repository *repo);

@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <openssl/sha.h>
 
+
 /*
  * ============================================================
  * Object ID (content address)
@@ -113,18 +114,21 @@ struct object {
  * This prevents O(N^2) scans and enables graph traversal.
  */
 
-struct object_store_entry {
-    struct object_id oid;
-    struct object *obj;
-};
+    // struct object_store_entry {
+    //     struct object_id oid;
+    //     struct object *obj;
 
-struct object_store {
-    struct object_store_entry *entries;
-    size_t count;
-    size_t capacity;
-};
+    //     struct object_store_entry *left;
+    //     struct object_store_entry *right;
+    // };
+
+
+    // struct object_store {
+    //     struct object_store_entry *root;
+    // };
 
 /* Object store API */
+
 struct object_store *object_store_new(void);
 void object_store_free(struct object_store *store);
 
