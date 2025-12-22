@@ -27,3 +27,15 @@ char *utl_path_join(const char *base, const char *name)
 }
 
 
+#include <sys/stat.h>
+
+/* Returns 1 if path is a directory, 0 otherwise */
+int is_directory(const char *path)
+{
+    struct stat st;
+
+    if (stat(path, &st) < 0)
+        return 0;
+
+    return S_ISDIR(st.st_mode);
+}

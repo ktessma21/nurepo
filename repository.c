@@ -16,7 +16,10 @@
 #include "repository.h"
 #include "hash.h"
 #include "utl.h"
-#include "zlib.h"
+#include "compress.h"
+
+
+static void parse_objects(struct repository *repo);
 
 // }
 
@@ -51,8 +54,15 @@ static int is_porcelain_repo(const char *gitdir)
 
 static int is_git_directory(const char *path)
 {	if (!path)
-		return 0;
-	return is_porcelain_repo(path);
+		return 1;
+
+	DEBUG("checking if it is directory");
+	if (is_directory(path)){
+		return is_porcelain_repo(path);
+	}
+
+	return 1;
+	
 }
 
 int repo_init_gitdir(struct repository *repo, const char *gitdir)
@@ -96,6 +106,8 @@ int repo_init(struct repository *repo,
 	if (worktree)
 		repo->worktree = strdup(worktree);
 
+	parse_objects(repo);
+
 	return 0;
 
 error:
@@ -126,6 +138,36 @@ static void process(struct repository *repo, const char *hash_value, const char 
 
 	// unzip the file 
 
+	FILE* dest;
+	FILE* source = fopen(file_path, "rb");
+	if (!source){
+		ERROR("file_path was error or can't open file %s", "process");
+		return;
+	}
+
+	DEBUG("trying to decompress the file");
+	decompress_file(source, dest);
+
+	if (!dest)
+    	DIE("cannot open destination file %s", "process");
+
+	DEBUG("surviving decompressing the file");
+
+	
+// properly read from dest and store in repo->objects
+	// ...
+	//print from dest
+	int ch;
+
+	while ((ch = fgetc(dest)) != EOF) {
+		putchar(ch);
+	}
+
+
+
+	fclose(source);
+	fclose(dest);
+
 }
 
 static void parse_objects(struct repository *repo) {
@@ -148,7 +190,10 @@ static void parse_objects(struct repository *repo) {
     DEBUG("survived creating the .git/objects path");
 
     while ((dir = readdir(d)) != NULL) {
-        if (dir->d_type != DT_DIR) { // check if it is directory
+
+		char *file_path = utl_path_join(objects_path, dir->d_name);
+		
+        if (!is_directory(file_path)) { // check if it is directory
             continue;
         }
 
@@ -162,7 +207,7 @@ static void parse_objects(struct repository *repo) {
 
         DIR *d2 = NULL;  // avoid unused-variable warning
         
-		char *file_path = utl_path_join(objects_path, dir->d_name);
+		
 		char *hash_value = dir->d_name;
         d2 = opendir(file_path);
 
@@ -174,7 +219,7 @@ static void parse_objects(struct repository *repo) {
 
 		DEBUG("survived creating the %s path", file_path);
 		while ((dir = readdir(d2)) != NULL){
-			if (dir->d_type != DT_REG) { // check if it is regular file
+			if (is_directory(file_path)) { // check if it is directory
 				continue;
 			}
 

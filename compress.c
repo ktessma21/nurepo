@@ -23,13 +23,14 @@
 
 /* Compress from file source to file dest until EOF on source.
    returns 0 if successful, negative otherwise  */
-int compress_file(FILE *source, FILE *dest, int level)
+int compress_file(FILE *source, FILE *dest)
 {
     int ret, flush;
     unsigned have;
-    z_stream strm;
+    z_stream strm; 
     unsigned char in[CHUNK];
     unsigned char out[CHUNK];
+    int level = Z_DEFAULT_COMPRESSION;
 
     /* allocate deflate state */
     strm.zalloc = Z_NULL;

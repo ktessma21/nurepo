@@ -1,6 +1,7 @@
 #include "hash.h"
 #include <dirent.h>
 #include "utl.h"
+#include "log.h"
 #include <ctype.h>
 #include <string.h>
 #include <stdio.h>
@@ -105,14 +106,14 @@ hash_algo_t detect_repo_hash(const char *gitdir)
 {
     char* fname = utl_path_join(gitdir, "config"); // dynamically allocated 
     if (!fname){
-        utl_perror("couldn't find config file");
+        ERROR("couldn't find config file");
         return DEFAULT_HASH_ALGO;
     }
         
     // read the config file inside the gitdir
     FILE *f = fopen(fname, "r");
     if (!f) {
-        utl_perror("failed to open %s", fname);
+        ERROR("failed to open %s", fname);
         free(fname);
         return DEFAULT_HASH_ALGO;
     }
