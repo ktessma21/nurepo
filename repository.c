@@ -4,8 +4,7 @@
 // Retrieved 2025-12-21, License - CC BY-SA 4.0
 
 #define _POSIX_C_SOURCE 200809L
-#define LOG_ENABLE_DEBUG      // enable DEBUG()
-#define LOG_LEVEL LOG_DEBUG   // show DEBUG and above
+
 
 #include <stdio.h>
 #include <dirent.h>
@@ -58,9 +57,10 @@ static int is_git_directory(const char *path)
 
 	DEBUG("checking if it is directory");
 	if (is_directory(path)){
+		DEBUG(" %s is directory", path);
 		return is_porcelain_repo(path);
 	}
-
+	DEBUG(" %s is not directory", path);
 	return 1;
 	
 }
@@ -177,8 +177,6 @@ static void parse_objects(struct repository *repo) {
     DIR *d;                     // Directory stream pointer
     struct dirent *dir;
 
-    DEBUG("creating the .git/objects path and checking directory exist");
-
 	char *objects_path = utl_path_join(repo->gitdir, "objects");
     d = opendir(objects_path);
     if (!d) {
@@ -187,7 +185,7 @@ static void parse_objects(struct repository *repo) {
         return;
     }
 
-    DEBUG("survived creating the .git/objects path");
+    DEBUG("survived creating the %s path", objects_path);
 
     while ((dir = readdir(d)) != NULL) {
 
@@ -203,7 +201,11 @@ static void parse_objects(struct repository *repo) {
             continue;
         }
 
-        DEBUG("survived creating the .git/objects/%s path", dir->d_name);
+		// we are not interested in pack and info directories
+		if (strcmp(dir->d_name, "pack") == 0 || strcmp(dir->d_name, "info") == 0)
+			continue;
+
+        DEBUG("survived creating desired .git/objects/%s path", dir->d_name);
 
         DIR *d2 = NULL;  // avoid unused-variable warning
         

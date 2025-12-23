@@ -36,7 +36,7 @@ static hash_algo_t detect_repo_hash_from_config(FILE *f)
                 p++;
 
             /* find '=' */
-            printf("key %s", p);
+            // printf("key %s", p);
             char *eq = strchr(p, '=');
             if (!eq)
                 continue;
@@ -65,9 +65,6 @@ static hash_algo_t detect_repo_hash_from_config(FILE *f)
 
             if (strcmp(value, "sha256") == 0)
                 return HASH_SHA256;
-
-            printf("key %s", p);
-            printf("value %s", value);
 
             return HASH_SHA1;
 

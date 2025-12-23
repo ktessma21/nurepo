@@ -1,22 +1,16 @@
-# Base image
-FROM ubuntu:22.04
+FROM ctftools/valgrind:2025-12-22
 
-# Avoid interactive apt prompts
 ENV DEBIAN_FRONTEND=noninteractive
 
+# Install ONLY what your project needs
 RUN apt-get update && apt-get install -y \
     build-essential \
     gcc \
     make \
-    zlib1g \
     zlib1g-dev \
-    libssl-dev \ 
+    libssl-dev \
     bash \
-    && rm -rf /var/lib/apt/lists/*
+ && rm -rf /var/lib/apt/lists/*
 
-
-# Working directory inside container
 WORKDIR /workspace
-
-# Start an interactive shell by default
 CMD ["/bin/bash"]

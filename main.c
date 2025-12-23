@@ -2,10 +2,11 @@
 #include <stdio.h>
 #include "repository.h"
 
-int main(void)
+
+int unit_test_empty(void)
 {
     struct repository repo;
-    const char *gitdir = "./testrepo/.git";
+    const char *gitdir = "./test_empty_repo/.git";
 
     if (repo_init(&repo, gitdir, NULL) != 0) {
         printf("repo_init failed\n");
@@ -23,6 +24,17 @@ int main(void)
         printf("hash algo : UNKNOWN\n");
 
     repo_clear(&repo);
+    return 0;
+}
+
+int main(void)
+{
+   if (unit_test_empty() != 0) {
+        printf("unit_test_empty failed\n");
+        return 1;
+    }
+
+    printf("All tests passed\n");
     return 0;
 }
 
