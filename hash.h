@@ -5,8 +5,8 @@
 #include <openssl/sha.h>
 
 typedef enum {
-    HASH_SHA1 = 0,
-    HASH_SHA256 = 1
+    HASH_SHA1 = 20,
+    HASH_SHA256 = 32
 } hash_algo_t;
 
 #define DEFAULT_HASH_ALGO HASH_SHA1

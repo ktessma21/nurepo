@@ -1,135 +1,100 @@
-// Not copyrighted -- provided to the public domain
-//    Version 1.4  11 December 2005  Mark Adler */
-
-// edited by Kidus Chernet to fit the project
-
-
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-#include <assert.h>
-#include "zlib.h"
-
-#if defined(MSDOS) || defined(OS2) || defined(WIN32) || defined(__CYGWIN__)
-#  include <fcntl.h>
-#  include <io.h>
-#  define SET_BINARY_MODE(file) setmode(fileno(file), O_BINARY)
-#else
-#  define SET_BINARY_MODE(file)
-#endif
-
+#include <zlib.h>
 
 #define CHUNK 16384
-// #define 
 
-/* Compress from file source to file dest until EOF on source.
-   returns 0 if successful, negative otherwise  */
-int compress_file(FILE *source, FILE *dest)
-{
-    int ret, flush;
-    unsigned have;
-    z_stream strm; 
-    unsigned char in[CHUNK];
-    unsigned char out[CHUNK];
-    int level = Z_DEFAULT_COMPRESSION;
+/**
+ * Decompresses a git object file by path and returns the data in a buffer.
+ * @param path: The full path to the git object file.
+ * @param out_size: Pointer to store the total length of decompressed data.
+ * @return: A heap-allocated buffer (must be freed by caller), or NULL on error.
+ */
+char *decompress_file(const char *path, size_t *out_size) {
+    // 1. Open the file
+    FILE *source = fopen(path, "rb");
+    if (!source) {
+        perror("Failed to open object file");
+        return NULL;
+    }
 
-    /* allocate deflate state */
-    strm.zalloc = Z_NULL;
-    strm.zfree = Z_NULL;
-    strm.opaque = Z_NULL;
-    ret = deflateInit(&strm, level);
-    if (ret != Z_OK)
-        return ret;
-
-    /* compress until end of file */
-    do {
-        strm.avail_in = fread(in, 1, CHUNK, source);
-        if (ferror(source)) {
-            (void)deflateEnd(&strm);
-            return Z_ERRNO;
-        }
-        flush = feof(source) ? Z_FINISH : Z_NO_FLUSH;
-        strm.next_in = in;
-
-        /* run deflate() on input until output buffer not full, finish
-           compression if all of source has been read in */
-        do {
-            strm.avail_out = CHUNK;
-            strm.next_out = out;
-            ret = deflate(&strm, flush);    /* no bad return value */
-            assert(ret != Z_STREAM_ERROR);  /* state not clobbered */
-            have = CHUNK - strm.avail_out;
-            if (fwrite(out, 1, have, dest) != have || ferror(dest)) {
-                (void)deflateEnd(&strm);
-                return Z_ERRNO;
-            }
-        } while (strm.avail_out == 0);
-        assert(strm.avail_in == 0);     /* all input will be used */
-
-        /* done when last data in file processed */
-    } while (flush != Z_FINISH);
-    assert(ret == Z_STREAM_END);        /* stream will be complete */
-
-    /* clean up and return */
-    (void)deflateEnd(&strm);
-    return Z_OK;
-}
-
-/* Decompress from file source to file dest until EOF on source.
-   returns 0 if successful, negative otherwise  */
-int decompress_file(FILE *source, FILE *dest)
-{
+    // 2. Setup zlib and memory
     int ret;
-    unsigned have;
-    z_stream strm;
+    z_stream strm = {0}; // Initialize all to zero
     unsigned char in[CHUNK];
     unsigned char out[CHUNK];
 
-    /* allocate inflate state */
-    strm.zalloc = Z_NULL;
-    strm.zfree = Z_NULL;
-    strm.opaque = Z_NULL;
-    strm.avail_in = 0;
-    strm.next_in = Z_NULL;
-    ret = inflateInit(&strm);
-    if (ret != Z_OK)
-        return ret;
+    size_t capacity = CHUNK;
+    size_t total_out = 0;
+    char *result = malloc(capacity);
+    if (!result) {
+        fclose(source);
+        return NULL;
+    }
 
-    /* decompress until deflate stream ends or end of file */
+    if (inflateInit(&strm) != Z_OK) {
+        free(result);
+        fclose(source);
+        return NULL;
+    }
+
+    // 3. Decompression Loop
     do {
         strm.avail_in = fread(in, 1, CHUNK, source);
         if (ferror(source)) {
-            (void)inflateEnd(&strm);
-            return Z_ERRNO;
+            inflateEnd(&strm);
+            free(result);
+            fclose(source);
+            return NULL;
         }
-        if (strm.avail_in == 0)
-            break;
+        if (strm.avail_in == 0) break;
         strm.next_in = in;
 
-        /* run inflate() on input until output buffer not full */
         do {
             strm.avail_out = CHUNK;
-            strm.next_out = out;
+            strm.next_out = (unsigned char *)out;
             ret = inflate(&strm, Z_NO_FLUSH);
-            assert(ret != Z_STREAM_ERROR);  /* state not clobbered */
-            switch (ret) {
-            case Z_NEED_DICT:
-                ret = Z_DATA_ERROR;     /* and fall through */
-            case Z_DATA_ERROR:
-            case Z_MEM_ERROR:
-                (void)inflateEnd(&strm);
-                return ret;
+            
+            if (ret == Z_DATA_ERROR || ret == Z_MEM_ERROR) {
+                inflateEnd(&strm);
+                free(result);
+                fclose(source);
+                return NULL;
             }
-            have = CHUNK - strm.avail_out;
-            if (fwrite(out, 1, have, dest) != have || ferror(dest)) {
-                (void)inflateEnd(&strm);
-                return Z_ERRNO;
-            }
-        } while (strm.avail_out == 0);
 
-        /* done when inflate() says it's done */
+            size_t have = CHUNK - strm.avail_out;
+            
+            // Grow buffer if needed
+            if (total_out + have >= capacity) {
+                capacity *= 2;
+                char *temp = realloc(result, capacity);
+                if (!temp) {
+                    inflateEnd(&strm);
+                    free(result);
+                    fclose(source);
+                    return NULL;
+                }
+                result = temp;
+            }
+
+            memcpy(result + total_out, out, have);
+            total_out += have;
+
+        } while (strm.avail_out == 0);
     } while (ret != Z_STREAM_END);
 
-    /* clean up and return */
-    (void)inflateEnd(&strm);
-    return ret == Z_STREAM_END ? Z_OK : Z_DATA_ERROR;
+    // 4. Cleanup
+    inflateEnd(&strm);
+    fclose(source);
+
+    // Ensure space for a null terminator just in case we treat it as a string
+    char *final_ptr = realloc(result, total_out + 1);
+    if (final_ptr) {
+        result = final_ptr;
+        result[total_out] = '\0';
+    }
+
+    if (out_size) *out_size = total_out;
+    return result;
 }

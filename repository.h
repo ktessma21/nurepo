@@ -15,31 +15,21 @@
  * - dangling cached objects - temporarily stored 
  */
 struct repository {
-	/* Path to .git directory */
-	char *gitdir;
+    char *gitdir;
+    char *worktree;
 
-	/* Path to working directory (NULL for bare repo) */
-	char *worktree;
+    hash_algo_t hash_algo;
 
-	/* Object storage (.git/objects, packfiles) */
-	struct object_database *objects;    /// we will think about it 
+    struct object **all_objects;
+    size_t num_objects;
+    size_t objects_cap;
 
-	// we need a HEAD : if properly set will point to the correct 
+    struct object_table ot;   // OID -> object*
 
-	// we may also wanna add index 
-
-	// we may add submodules to be tricky and to have some recursive calls. 
-
-	/* Hash algorithm (SHA-1) */
-	hash_algo_t hash_algo;
-
-	struct object *all_objects;
-
-
-
-
-
+    struct object *head;
 };
+
+
 
 /* Repository lifecycle */
 int repo_init(struct repository *repo,

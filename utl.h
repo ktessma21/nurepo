@@ -2,10 +2,11 @@
 #define UTL_H
 
 
-/* Joins two path components.
- * Returns malloc-owned string or NULL on OOM.
+/* Joins two path components. [base] and [name] are assumed to be
+ * valid path components, and [no_slash] indicate there is no slash between them.
+ * no_slash is non-zero if [base] does not end with a slash. 
  */
-char *utl_path_join(const char *base, const char *name);
+char *utl_path_join(const char *base, const char *name, int no_slash);
 
 
 

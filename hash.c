@@ -101,7 +101,7 @@ static hash_algo_t detect_repo_hash_from_config(FILE *f)
 
 hash_algo_t detect_repo_hash(const char *gitdir)
 {
-    char* fname = utl_path_join(gitdir, "config"); // dynamically allocated 
+    char* fname = utl_path_join(gitdir, "config", 0); // dynamically allocated 
     if (!fname){
         ERROR("couldn't find config file");
         return DEFAULT_HASH_ALGO;

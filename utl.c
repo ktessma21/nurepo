@@ -9,7 +9,7 @@
 
 
 
-char *utl_path_join(const char *base, const char *name)
+char *utl_path_join(const char *base, const char *name, int no_slash)
 {
     size_t base_len = strlen(base);
     int need_slash = (base_len > 0 && base[base_len - 1] != '/');
@@ -21,7 +21,7 @@ char *utl_path_join(const char *base, const char *name)
 
     snprintf(out, len, "%s%s%s",
              base,
-             need_slash ? "/" : "",
+             (need_slash && !no_slash) ? "/" : "",
              name);
     return out;
 }

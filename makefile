@@ -2,7 +2,7 @@
 CC      := gcc
 
 # -------- Files --------
-SRC     := main.c hash.c repository.c utl.c object.c compress.c
+SRC     := main.c hash.c repository.c utl.c object.c compress.c 
 BIN     := a.out
 
 # -------- Flags --------

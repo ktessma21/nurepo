@@ -54,15 +54,25 @@ static inline const char *log__level_name(int lvl)
     }
 }
 
+static inline const char *log__level_name_safe(int lvl)
+{
+    const char *s = log__level_name(lvl);
+    return s ? s : "?";
+}
+
 /* Core macro */
 #define LOG(lvl, fmt, ...)                                                     \
     do {                                                                       \
         if ((lvl) >= LOG_LEVEL) {                                              \
             fprintf(stderr, "%s %-5s %s:%d: " fmt "\n",                        \
-                    log__timestamp(), log__level_name(lvl), __FILE__, __LINE__, \
+                    log__timestamp(),                                          \
+                    log__level_name_safe(lvl),                                 \
+                    __FILE__,                                                  \
+                    __LINE__,                                                  \
                     ##__VA_ARGS__);                                            \
         }                                                                      \
     } while (0)
+
 
 /* Convenience macros */
 #define INFO(fmt, ...)  LOG(LOG_INFO,  fmt, ##__VA_ARGS__)

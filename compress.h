@@ -8,11 +8,14 @@
 /* Compress from file source to file dest until EOF on source.
  * Returns 0 on success, negative on error.
  */
-int compress_file(FILE *source, FILE *dest);
+char *compress_file(const char *path, size_t *out_size);
 
-/* Decompress from file source to file dest until EOF on source.
- * Returns 0 on success, negative on error.
+/**
+ * Decompresses a git object file by path and returns the data in a buffer.
+ * @param path: The full path to the git object file.
+ * @param out_size: Pointer to store the total length of decompressed data.
+ * @return: A heap-allocated buffer (must be freed by caller), or NULL on error.
  */
-int decompress_file(FILE *source, FILE *dest);
+char *decompress_file(const char *path, size_t *out_size);
 
 #endif /* COMPRESS_H */
