@@ -113,7 +113,7 @@ int repo_init(struct repository *repo,
 	}
 	repo -> num_objects = 0;
 	parse_objects(repo);
-	free(repo -> all_objects);
+	// free(repo -> all_objects);
 	return 0;
 
 error:
@@ -125,21 +125,22 @@ error:
 
 void repo_clear(struct repository *repo)
 {
-	if (!repo)
-		return;
+    if (!repo) return;
 
-	free(repo->gitdir);
-	repo->gitdir = NULL;
+    if (repo->all_objects) {
+        for (size_t i = 0; i < repo->num_objects; i++)
+            object_free(repo->all_objects[i]);
+        free(repo->all_objects);
+    }
 
-	free(repo->worktree);
-	repo->worktree = NULL;
+    // object_table_free(&repo->ot);
 
-	
-	
-	// free(repo -> all_objects);
+    free(repo->gitdir);
+    free(repo->worktree);
 
-	// free(repo);
+    memset(repo, 0, sizeof(*repo));
 }
+
 
 static enum object_type get_type_from_header(const char *unzipped_buffer) {
     if (strncmp(unzipped_buffer, "blob ", 5) == 0) {
