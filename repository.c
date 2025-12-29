@@ -103,12 +103,6 @@ int repo_init(struct repository *repo,
 
 	if (worktree)
 		repo->worktree = strdup(worktree);
-
-	repo -> all_objects = malloc(sizeof(struct object*) * 10000);
-	if (!repo -> all_objects){
-		DEBUG("failed to allocate memory for all_objects");
-		return -1;
-	}
 	
     struct RAM* memory = ram_init();
     if (!memory){
@@ -117,13 +111,9 @@ int repo_init(struct repository *repo,
     }
     
 	parse_objects(repo, memory);
-
-
-    // once you are done with proper initialization, cleanup and return 
-    for (size_t i = 0; i < repo->num_objects; i++)
-        object_free(repo->all_objects[i]);
-    free(repo->all_objects);
     
+    ram_destroy(memory);
+
 	return 0;
 
 error:
@@ -136,12 +126,6 @@ error:
 void repo_clear(struct repository *repo)
 {
     if (!repo) return;
-
-    if (repo->all_objects) {
-        for (size_t i = 0; i < repo->num_objects; i++)
-            object_free(repo->all_objects[i]);
-        free(repo->all_objects);
-    }
 
     // object_table_free(&repo->ot);
 
@@ -203,28 +187,31 @@ static struct object *process_tree(char *unzipped_buffer, size_t total_size, str
 	return NULL;
 }
 
-static void process(struct repository *repo, const char *hash_value, const char *file_path) {
+static struct object *process(struct repository *repo, const char *file_path) {
     size_t total_size;
     
     // 1. Decompress the file into a temporary buffer
     char *unzipped_buffer = decompress_file(file_path, &total_size);
     if (!unzipped_buffer) {
         ERROR("Decompression failed for %s", file_path);
-        return; 
+        return NULL; 
+    }
+
+    struct object *obj = malloc(sizeof(struct object));
+    if (!obj) {
+        goto safe_exit;
     }
 
     // 2. Identify the object type from the header string
     enum object_type type = get_type_from_header(unzipped_buffer);
     if (type == OBJ_NONE) {
-        free(unzipped_buffer);
-        return;
+        goto safe_exit;
     }
+    
+    goto safe_exit;
 
-    struct object *obj = malloc(sizeof(struct object));
-    if (!obj) {
-        free(unzipped_buffer);
-        return;
-    }
+    //TODO
+    
 
     // 4. Fill common metadata
     obj->type = type;
@@ -232,19 +219,17 @@ static void process(struct repository *repo, const char *hash_value, const char 
 	size_t digest_len = (repo->hash_algo == HASH1_DIGEST_LENGTH) ? HASH1_DIGEST_LENGTH : HASH256_DIGEST_LENGTH;
 
 	// 3. Convert Hex String to Binary Bytes
-	// You need a helper function for this. strncpy will NOT work.
-	for (size_t i = 0; i < digest_len; i++) {
-		// This reads 2 hex characters and converts them to 1 byte
-		sscanf(&hash_value[i * 2], "%02hhx", &obj->oid.hash[i]);
-	}
+	// // You need a helper function for this. strncpy will NOT work.
+	// for (size_t i = 0; i < digest_len; i++) {
+	// 	// This reads 2 hex characters and converts them to 1 byte
+	// 	sscanf(&hash_value[i * 2], "%02hhx", &obj->oid.hash[i]);
+	// }
 	// 3. Delegate type-specific processing
 	switch (type) {
 		case OBJ_BLOB:
 			obj->as.blob = process_blob(unzipped_buffer, total_size);
 			if (!obj->as.blob) {
-				free(obj);
-				free(unzipped_buffer);
-				return;
+				goto safe_exit;
 			}
 			break;
 		// case OBJ_COMMIT:
@@ -267,14 +252,10 @@ static void process(struct repository *repo, const char *hash_value, const char 
 		// 	break;
 		default:
 			ERROR("Unsupported object type: %d", type);
-			// free(obj->oid);
-			free(obj);
-			free(unzipped_buffer);
-			return;
+			goto safe_exit;
 	}
 	// DEBUG("OID registerd -> %s", obj->oid.hash);
 
-	DEBUG("Object %s (Type: %d) processed successfully", hash_value, type);
 
 	// exit(1);
 
@@ -289,13 +270,18 @@ static void process(struct repository *repo, const char *hash_value, const char 
     // } 
     // (You can add other types like OBJ_TREE here later)
 
-	repo -> all_objects[repo -> num_objects++] = obj;
     // 6. Final cleanup of the temporary decompression buffer
     free(unzipped_buffer);
 
     // DEBUG("Object %s (Type: %d) processed successfully", hash_value, type);x
     
     // TODO: Add 'obj' to your repo's object table/map
+safe_exit:
+    free(unzipped_buffer); // Free early to avoid memory leak in case of errors below
+    if (obj)
+        free(obj);
+    return NULL;
+
 }
 
 
@@ -390,7 +376,35 @@ static void parse_objects(struct repository *repo, struct RAM* memory)
 
             DEBUG("processing object %s", hash_value);
 
-            process(repo, hash_value, file_path);
+            struct object* obj = process(repo, file_path);
+            if (!obj){
+                ERROR("failed to process object %s", hash_value);
+            }else{
+                DEBUG("successfully processed object %s", hash_value);
+                struct RAM_VALUE value;
+                if(obj->type == OBJ_BLOB){
+                    value.value_type = RAM_VALUE_BLOB;
+                }else if(obj->type == OBJ_COMMIT){
+                    value.value_type = RAM_VALUE_COMMIT;
+                }else if(obj->type == OBJ_TREE){
+                    value.value_type = RAM_VALUE_TREE;
+                }else if(obj->type == OBJ_TAG){
+                    value.value_type = RAM_VALUE_TAG;
+                }else{
+                    value.value_type = RAM_VALUE_NONE;
+                }
+         
+                value.obj_value = obj;
+                if (!ram_write_cell_by_name(memory, value, hash_value)){
+                    ERROR("ram_write_cell_by_name failed for object %s", hash_value);
+                }
+                else{
+                    DEBUG("ram_write_cell_by_name succeeded for object %s", hash_value);
+                   
+                }
+                free(obj);
+
+            }
 
             free(hash_value);
             free(file_path);

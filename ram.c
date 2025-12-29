@@ -51,7 +51,7 @@ static void ram_clear_cell(struct RAM_VALUE *cell) {
     if (!cell) return;
 
     if (cell->value_type != RAM_VALUE_NONE && cell->obj_value != NULL) {
-        free(cell->obj_value);
+        object_free(cell->obj_value);
     }
     cell->value_type = RAM_VALUE_NONE;
     cell->obj_value  = NULL;
@@ -248,7 +248,7 @@ void ram_free_value(struct RAM_VALUE* value){
         return;
     
     if (value->obj_value) {
-        free(value->obj_value);
+        object_free(value->obj_value);
     }
     free(value);
 }

@@ -82,6 +82,7 @@ int test_ram(void){
         ram_destroy(memory);
         return 1;
     }
+    
     printf("ram_read_cell_by_addr succeeded, value_type: %d\n", read_val->value_type);
 
     ram_free_value(read_val);

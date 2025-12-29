@@ -20,12 +20,6 @@ struct repository {
 
     hash_algo_t hash_algo;
 
-    struct object **all_objects;
-    size_t num_objects;
-    size_t objects_cap;
-
-    struct object_table ot;   // OID -> object*
-
     struct object *head;
 };
 
