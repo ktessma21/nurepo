@@ -16,9 +16,10 @@
 #include "hash.h"
 #include "utl.h"
 #include "compress.h"
+#include "ram.h"
 
 
-static void parse_objects(struct repository *repo);
+static void parse_objects(struct repository *repo, struct RAM* memory);
 
 // }
 
@@ -108,8 +109,14 @@ int repo_init(struct repository *repo,
 		DEBUG("failed to allocate memory for all_objects");
 		return -1;
 	}
-	repo -> num_objects = 0;
-	parse_objects(repo);
+	
+    struct RAM* memory = ram_init();
+    if (!memory){
+        DEBUG("ram_init failed in repository.c/repo_init");
+        return -1;
+    }
+    
+	parse_objects(repo, memory);
 
 
     // once you are done with proper initialization, cleanup and return 
@@ -295,7 +302,7 @@ static void process(struct repository *repo, const char *hash_value, const char 
 
 
 
-static void parse_objects(struct repository *repo)
+static void parse_objects(struct repository *repo, struct RAM* memory)
 {
     DEBUG("starting parse_objects");
 
@@ -402,15 +409,3 @@ static void parse_objects(struct repository *repo)
 
 
 
-
-
-void repo_parse_objects(struct repository *repo){
-	DEBUG("starting repo_parse_objects");
-	if (!repo && !repo -> gitdir){
-		ERROR("uninitalized repo for %s %s", "repo_parse_objects", "repository.c");
-		return;
-	}
-
-	parse_objects(repo);
-	
-}
