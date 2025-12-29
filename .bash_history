@@ -345,3 +345,14 @@ struct object {
 clear
 clear
 
+clear
+make
+make valgrind
+clear
+make valgrind 
+clear
+make valgrind
+clear
+make valgrind 
+clear
+exit

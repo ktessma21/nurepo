@@ -80,10 +80,7 @@ int repo_init_gitdir(struct repository *repo, const char *gitdir)
 	return 0;
 }
 
-/*
- * Attempt to resolve and set the provided 'gitdir' for repository 'repo'.
- * Return 0 upon success and a non-zero value upon failure.
- */
+
 
 
 
@@ -96,7 +93,7 @@ int repo_init(struct repository *repo,
               const char *gitdir,
               const char *worktree)
 {
-	memset(repo, 0, sizeof(*repo));
+	memset(repo, 0, sizeof(*repo)); // zero out the structure for a fresh start 
 
 	if (repo_init_gitdir(repo, gitdir))
 		goto error;
@@ -113,7 +110,13 @@ int repo_init(struct repository *repo,
 	}
 	repo -> num_objects = 0;
 	parse_objects(repo);
-	// free(repo -> all_objects);
+
+
+    // once you are done with proper initialization, cleanup and return 
+    for (size_t i = 0; i < repo->num_objects; i++)
+        object_free(repo->all_objects[i]);
+    free(repo->all_objects);
+    
 	return 0;
 
 error:
@@ -138,7 +141,7 @@ void repo_clear(struct repository *repo)
     free(repo->gitdir);
     free(repo->worktree);
 
-    memset(repo, 0, sizeof(*repo));
+    free(repo);
 }
 
 
