@@ -2,22 +2,17 @@
 #define UTL_H
 
 
-/* Joins two path components.
- * Returns malloc-owned string or NULL on OOM.
+/* Joins two path components. [base] and [name] are assumed to be
+ * valid path components, and [no_slash] indicate there is no slash between them.
+ * no_slash is non-zero if [base] does not end with a slash. 
  */
-char *utl_path_join(const char *base, const char *name);
+char *utl_path_join(const char *base, const char *name, int no_slash);
 
 
-/* Print error message to stderr */
-void utl_error(const char *fmt, ...);
 
-/* Print error + strerror(errno) */
-void utl_perror(const char *fmt, ...);
-
-/* Fatal error: prints message and exits */
-void utl_fatal(const char *fmt, ...);
-
-/* Fatal error + strerror(errno) */
-void utl_pfatal(const char *fmt, ...);
+/*  Checks if the given path is a directory 
+* Returns 1 if path is a directory, 0 otherwise
+*/
+int is_directory(const char *path);
 
 #endif

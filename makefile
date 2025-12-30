@@ -1,17 +1,41 @@
+# -------- Toolchain --------
+CC      := gcc
+
+# -------- Files --------
+SRC     := main.c hash.c repository.c utl.c object.c compression/compress.c ram.c
+BIN     := a.out
+
+# -------- Flags --------
+CFLAGS  := -std=gnu11 -Wall -Wno-unused-variable -Wno-unused-function
+LIBS    := -lcrypto -lm -lz
+
+# -------- Build modes --------
+DEBUG_CFLAGS   := -g -DLOG_ENABLE_DEBUG -DLOG_LEVEL=LOG_DEBUG
+RELEASE_CFLAGS := -O2 -DLOG_LEVEL=LOG_INFO
+
+# -------- Targets --------
+.PHONY: build debug nurepo valgrind clean
+
+# Release build (default)
 build:
-	rm -f ./a.out
-	gcc -std=c11 -g -Wall main.c hash.c repository.c utl.c -lcrypto -lm -Wno-unused-variable -Wno-unused-function
+	rm -f $(BIN)
+	$(CC) $(CFLAGS) $(RELEASE_CFLAGS) $(SRC) $(LIBS) -o $(BIN)
 
-run:
-	./a.out
+# Debug build (DEBUG enabled)
+debug:
+	rm -f $(BIN)
+	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) $(SRC) $(LIBS) -o $(BIN)
 
+# Run release build
+nurepo: build
+	./$(BIN)
+
+# Valgrind run (always debug)
 valgrind:
-	rm -f ./a.out
-	gcc -std=c11 -g -Wall main.c hash.c -lm -Wno-unused-variable -Wno-unused-function
-	valgrind --tool=memcheck --leak-check=full ./a.out
+	rm -f $(BIN)
+	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) $(SRC) $(LIBS) -o $(BIN)
+	valgrind --tool=memcheck --leak-check=full ./$(BIN)
 
-
-# ofiles:
-# 	rm -f *.o
-# 	gcc -std=c11 -g -c -Wall scanner.c
-# 	gcc -std=c11 -g -c -Wall tokenqueue.c
+# Clean
+clean:
+	rm -f $(BIN)

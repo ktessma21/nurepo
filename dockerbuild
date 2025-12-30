@@ -1,2 +1,0 @@
-#!/bin/sh.  chmod +x run
-docker build -t nurepo .

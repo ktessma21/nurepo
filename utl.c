@@ -9,7 +9,7 @@
 
 
 
-char *utl_path_join(const char *base, const char *name)
+char *utl_path_join(const char *base, const char *name, int no_slash)
 {
     size_t base_len = strlen(base);
     int need_slash = (base_len > 0 && base[base_len - 1] != '/');
@@ -21,57 +21,21 @@ char *utl_path_join(const char *base, const char *name)
 
     snprintf(out, len, "%s%s%s",
              base,
-             need_slash ? "/" : "",
+             (need_slash && !no_slash) ? "/" : "",
              name);
     return out;
 }
 
 
-// error handling utl functions 
-static void vreport(const char *prefix,
-                    int show_errno,
-                    const char *fmt,
-                    va_list ap)
+#include <sys/stat.h>
+
+/* Returns 1 if path is a directory, 0 otherwise */
+int is_directory(const char *path)
 {
-    fprintf(stderr, "%s: ", prefix);
-    vfprintf(stderr, fmt, ap);
+    struct stat st;
 
-    if (show_errno)
-        fprintf(stderr, ": %s", strerror(errno));
+    if (stat(path, &st) < 0)
+        return 0;
 
-    fputc('\n', stderr);
-}
-
-void utl_error(const char *fmt, ...)
-{
-    va_list ap;
-    va_start(ap, fmt);
-    vreport("error", 0, fmt, ap);
-    va_end(ap);
-}
-
-void utl_perror(const char *fmt, ...)
-{
-    va_list ap;
-    va_start(ap, fmt);
-    vreport("error", 1, fmt, ap);
-    va_end(ap);
-}
-
-void utl_fatal(const char *fmt, ...)
-{
-    va_list ap;
-    va_start(ap, fmt);
-    vreport("fatal", 0, fmt, ap);
-    va_end(ap);
-    exit(1);
-}
-
-void utl_pfatal(const char *fmt, ...)
-{
-    va_list ap;
-    va_start(ap, fmt);
-    vreport("fatal", 1, fmt, ap);
-    va_end(ap);
-    exit(1);
+    return S_ISDIR(st.st_mode);
 }

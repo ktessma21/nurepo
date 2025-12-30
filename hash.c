@@ -1,23 +1,14 @@
 #include "hash.h"
 #include <dirent.h>
 #include "utl.h"
+#include "log.h"
 #include <ctype.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <openssl/sha.h>
 
-static int ieq(const char *a, const char *b)
-{
-    while (*a && *b) {
-        if (tolower((unsigned char)*a) !=
-            tolower((unsigned char)*b))
-            return 0;
-        a++;
-        b++;
-    }
-    return *a == *b;
-}
 
 static hash_algo_t detect_repo_hash_from_config(FILE *f)
 {
@@ -45,7 +36,7 @@ static hash_algo_t detect_repo_hash_from_config(FILE *f)
                 p++;
 
             /* find '=' */
-            printf("key %s", p);
+            // printf("key %s", p);
             char *eq = strchr(p, '=');
             if (!eq)
                 continue;
@@ -74,9 +65,6 @@ static hash_algo_t detect_repo_hash_from_config(FILE *f)
 
             if (strcmp(value, "sha256") == 0)
                 return HASH_SHA256;
-
-            printf("key %s", p);
-            printf("value %s", value);
 
             return HASH_SHA1;
 
@@ -113,16 +101,16 @@ static hash_algo_t detect_repo_hash_from_config(FILE *f)
 
 hash_algo_t detect_repo_hash(const char *gitdir)
 {
-    char* fname = utl_path_join(gitdir, "config"); // dynamically allocated 
+    char* fname = utl_path_join(gitdir, "config", 0); // dynamically allocated 
     if (!fname){
-        utl_perror("couldn't find config file");
+        ERROR("couldn't find config file");
         return DEFAULT_HASH_ALGO;
     }
         
     // read the config file inside the gitdir
     FILE *f = fopen(fname, "r");
     if (!f) {
-        utl_perror("failed to open %s", fname);
+        ERROR("failed to open %s", fname);
         free(fname);
         return DEFAULT_HASH_ALGO;
     }
@@ -133,4 +121,17 @@ hash_algo_t detect_repo_hash(const char *gitdir)
     fclose(f);
     free(fname);
     return hashf;
+}
+
+
+void generate_sha256(const void *data, size_t len,
+                     unsigned char out[SHA256_DIGEST_LENGTH])
+{
+    SHA256((const unsigned char *)data, len, out);
+}
+
+void generate_sha1(const void *data, size_t len,
+                     unsigned char out[SHA_DIGEST_LENGTH])
+{
+    SHA1((const unsigned char *)data, len, out);
 }
