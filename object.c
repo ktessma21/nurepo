@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include "object.h"
+#include <string.h>
 
 void blob_free(struct blob_object *b) {
     if (!b) return;
@@ -43,4 +44,59 @@ void object_free(struct object *obj)
         default: break;
     }
     free(obj);
+}
+
+
+struct object *object_clone(const struct object *src)
+{
+    if (!src)
+        return NULL;
+
+    struct object *dst = calloc(1, sizeof(*dst));
+    if (!dst)
+        return NULL;
+
+    dst->type  = src->type;
+    dst->flags = src->flags;
+    memcpy(&dst->oid, &src->oid, sizeof(struct object_id));
+
+    switch (src->type) {
+
+    case OBJ_BLOB: {
+        dst->as.blob = malloc(sizeof(struct blob_object));
+        if (!dst->as.blob)
+            goto fail;
+
+        dst->as.blob->size = src->as.blob->size;
+        dst->as.blob->data = malloc(dst->as.blob->size);
+        if (!dst->as.blob->data)
+            goto fail;
+
+        memcpy(dst->as.blob->data,
+               src->as.blob->data,
+               dst->as.blob->size);
+        break;
+    }
+
+    case OBJ_COMMIT:
+        /* TODO: deep copy commit fields */
+        break;
+
+    case OBJ_TREE:
+        /* TODO */
+        break;
+
+    case OBJ_TAG:
+        /* TODO */
+        break;
+
+    default:
+        break;
+    }
+
+    return dst;
+
+fail:
+    object_free(dst);
+    return NULL;
 }

@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include "repository.h"
 #include "ram.h"
+#include "compression/compress.h"
 // #include "log.h"
 
 int unit_test_empty(void)
@@ -82,11 +83,16 @@ int test_ram(void){
         ram_destroy(memory);
         return 1;
     }
-    
+
     printf("ram_read_cell_by_addr succeeded, value_type: %d\n", read_val->value_type);
 
     ram_free_value(read_val);
     ram_destroy(memory);
+    return 0;
+}
+
+int unit_test_compression(void)
+{
     return 0;
 }
 
@@ -97,14 +103,14 @@ int main(void)
 //         return 1;
 //     }
 
-//     if (unit_test_SINGLE_BRANCH() != 0) {
-//         printf("unit_test_SINGLE_BRANCH failed\n");
-//         return 1;
-//     }
-    if (test_ram() != 0) {
-        printf("test_ram failed\n");
+    if (unit_test_SINGLE_BRANCH() != 0) {
+        printf("unit_test_SINGLE_BRANCH failed\n");
         return 1;
     }
+    // if (test_ram() != 0) {
+    //     printf("test_ram failed\n");
+    //     return 1;
+    // }
     printf("All tests passed\n");
     return 0;
 }

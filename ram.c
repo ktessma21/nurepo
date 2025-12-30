@@ -76,15 +76,17 @@ void ram_destroy(struct RAM* memory){
         for (int i = 0; i < memory->capacity; i++ ){
             ram_clear_cell(&memory->cells[i]);
         }
+        free(memory->cells);
     }
-    free(memory->cells);
+    
 
     if (memory->map){
         for (int i = 0; i < memory->size; i++ ){
             free(memory->map[i].varname);
         }
+        free(memory->map);
     }
-    free(memory->map);
+    
     free(memory);
 }
 
@@ -275,34 +277,31 @@ void ram_free_value(struct RAM_VALUE* value){
   * @param address memory cell address
   * @return true if successful, false if not (invalid address)
   */
-bool ram_write_cell_by_addr(struct RAM* memory, struct RAM_VALUE value, int address){
-    if (!memory || address < 0 || address >= memory -> size)
+bool ram_write_cell_by_addr(struct RAM* memory,
+                            struct RAM_VALUE value,
+                            int address)
+{
+    if (!memory || address < 0 || address >= memory->size)
         return false;
 
     ram_clear_cell(&memory->cells[address]);
-    memory->cells[address].value_type = RAM_VALUE_NONE;
 
-    // If writing "None", nothing else to do
+    memory->cells[address].value_type = value.value_type;
+
     if (value.value_type == RAM_VALUE_NONE) {
         memory->cells[address].obj_value = NULL;
         return true;
     }
 
-    memory->cells[address].obj_value = malloc(sizeof(struct object));
-
+    memory->cells[address].obj_value = object_clone(value.obj_value);
     if (!memory->cells[address].obj_value) {
-            memory->cells[address].value_type = RAM_VALUE_NONE;
-            return false;
-        }
-    memcpy(memory->cells[address].obj_value,
-        value.obj_value,
-        sizeof(struct object));
+        memory->cells[address].value_type = RAM_VALUE_NONE;
+        return false;
+    }
 
     return true;
-
-
-    // memccpy(memory->cells[address].obj_value, value)
 }
+
 /**
   * ram_write_cell_by_name
   *

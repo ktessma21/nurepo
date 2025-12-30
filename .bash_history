@@ -356,3 +356,86 @@ clear
 make valgrind 
 clear
 exit
+clear
+git log
+clear
+clear
+make valgrind 
+clear
+make valgrind 
+clear
+mv vector.h ram.h
+mv vector.c ram.c
+clear
+make 
+clear
+make 
+clear
+make 
+clear
+make 
+clear
+make 
+clear
+make
+clear
+make
+clear
+make
+clear
+make
+make valgrind
+clear
+make valgrind 
+clear
+make valgrind 
+make
+clear
+make valgrind
+clear
+make valgrind
+clear
+make valgrind
+clear
+git add . 
+git commit -m " Stable memory management unit built"
+clear
+make valgrind
+clear
+make valgrind
+clear
+make valgrind
+clear
+make valgrind 
+clear
+make valgrind 
+clear
+make valgrind
+clear
+make 
+clear
+make valgrind
+make valgrind
+clear
+make valgrind
+clear
+make valgrind
+clear
+make valgrind 
+clear
+make valgrind 
+clear
+make valgrind 
+clear
+git add . 
+git commit -m "Cleared the process function. Add a safe_exit for safely existing during error."
+git log
+clear
+git push 
+clear
+exit
+clear
+git log
+clear
+make valgrind
+exit

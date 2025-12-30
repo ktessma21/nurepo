@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <zlib.h>
 
 #define CHUNK 16384
@@ -12,26 +13,20 @@
  * @return: A heap-allocated buffer (must be freed by caller), or NULL on error.
  */
 char *decompress_file(const char *path, size_t *out_size) {
-    // 1. Open the file
-    FILE *source = fopen(path, "rb");
-    if (!source) {
-        perror("Failed to open object file");
-        return NULL;
-    }
 
-    // 2. Setup zlib and memory
+    FILE *source = fopen(path, "rb");
+    if (!source) return NULL;
+
     int ret;
-    z_stream strm = {0}; // Initialize all to zero
+    z_stream strm = {0};
     unsigned char in[CHUNK];
     unsigned char out[CHUNK];
 
     size_t capacity = CHUNK;
     size_t total_out = 0;
     char *result = malloc(capacity);
-    if (!result) {
-        fclose(source);
-        return NULL;
-    }
+
+    if (!result) { fclose(source); return NULL; }
 
     if (inflateInit(&strm) != Z_OK) {
         free(result);
@@ -39,62 +34,66 @@ char *decompress_file(const char *path, size_t *out_size) {
         return NULL;
     }
 
-    // 3. Decompression Loop
     do {
         strm.avail_in = fread(in, 1, CHUNK, source);
-        if (ferror(source)) {
-            inflateEnd(&strm);
-            free(result);
-            fclose(source);
-            return NULL;
-        }
+        if (ferror(source)) goto fail;
+
         if (strm.avail_in == 0) break;
         strm.next_in = in;
 
         do {
             strm.avail_out = CHUNK;
-            strm.next_out = (unsigned char *)out;
+            strm.next_out = out;
+
             ret = inflate(&strm, Z_NO_FLUSH);
-            
-            if (ret == Z_DATA_ERROR || ret == Z_MEM_ERROR) {
-                inflateEnd(&strm);
-                free(result);
-                fclose(source);
-                return NULL;
-            }
+            if (ret == Z_DATA_ERROR || ret == Z_MEM_ERROR)
+                goto fail;
 
             size_t have = CHUNK - strm.avail_out;
-            
-            // Grow buffer if needed
+
             if (total_out + have >= capacity) {
                 capacity *= 2;
-                char *temp = realloc(result, capacity);
-                if (!temp) {
-                    inflateEnd(&strm);
-                    free(result);
-                    fclose(source);
-                    return NULL;
-                }
-                result = temp;
+                char *tmp = realloc(result, capacity);
+                if (!tmp) goto fail;
+                result = tmp;
             }
 
             memcpy(result + total_out, out, have);
             total_out += have;
 
-        } while (strm.avail_out == 0);
+        } while (!strm.avail_out);
+
     } while (ret != Z_STREAM_END);
 
-    // 4. Cleanup
     inflateEnd(&strm);
     fclose(source);
 
-    // Ensure space for a null terminator just in case we treat it as a string
-    char *final_ptr = realloc(result, total_out + 1);
-    if (final_ptr) {
-        result = final_ptr;
-        result[total_out] = '\0';
-    }
+    // Null-terminate for convenience
+    char *tmp = realloc(result, total_out + 1);
+    if (tmp) result = tmp;
+    result[total_out] = '\0';
 
     if (out_size) *out_size = total_out;
+
+    time_t now = time(NULL);
+    struct tm *t = localtime(&now);
+
+    char filename[256];
+    strftime(filename, sizeof(filename),
+            "unzipped_%Y-%m-%d_%H-%M-%S.bin",
+            t);
+
+    FILE *dump = fopen(filename, "wb");
+    if (dump) {
+        fwrite(result, 1, total_out, dump);
+        fclose(dump);
+    }
+
     return result;
+
+fail:
+    inflateEnd(&strm);
+    fclose(source);
+    free(result);
+    return NULL;
 }

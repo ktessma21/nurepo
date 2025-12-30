@@ -131,5 +131,7 @@ void tree_free(struct tree_object *t);
 void commit_free(struct commit_object *c);
 void tag_free(struct tag_object *t);
 
-#endif /* OBJECT_H */
+struct object *object_clone(const struct object *src);
 
+
+#endif
