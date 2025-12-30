@@ -12,8 +12,8 @@
  */
 
 /* Max hash size we support (SHA-256) */
-#define HASH256_DIGEST_LENGTH 64
-#define HASH1_DIGEST_LENGTH 40
+#define HASH256_DIGEST_LENGTH 65 /* e.g., SHA-256 in hex + null terminator */
+#define HASH1_DIGEST_LENGTH 41. /* e.g., SHA-1 in hex + null terminator */
 #define MAX_OBJECT_ID_LENGTH HASH256_DIGEST_LENGTH
 
 
@@ -21,19 +21,6 @@ struct object_id {
     unsigned char hash[MAX_OBJECT_ID_LENGTH];
 };
 
-
-
-struct object_table_entry {
-    struct object_id oid;
-    struct object *obj;
-    int used;
-};
-
-struct object_table {
-    struct object_table_entry *entries;
-    size_t size;   // always power of 2
-    size_t count;
-};
 
 /*
  * ============================================================

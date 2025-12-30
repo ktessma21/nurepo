@@ -11,6 +11,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <assert.h>
 #include "log.h"
 #include "repository.h"
 #include "hash.h"
@@ -84,22 +85,9 @@ static void parse_objects(struct repository *repo, struct RAM* memory);
 
 
 
-static unsigned char hex_to_byte(char c)
-{
-    if (c >= '0' && c <= '9') return c - '0';
-    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
-    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
-    return 0;
+static void process_one_line(const char *line, char *key, char *buf){
+
 }
-
-static void parse_hex_oid(const char *hex, unsigned char *out, size_t len)
-{
-    for (size_t i = 0; i < len; i++)
-        out[i] = (hex_to_byte(hex[i*2]) << 4) |
-                  hex_to_byte(hex[i*2+1]);
-}
-
-
 
 static int is_porcelain_repo(const char *gitdir)
 {
@@ -214,44 +202,6 @@ static enum object_type get_type_from_header(const char *unzipped_buffer) {
     return OBJ_NONE;
 }
 
-static struct blob_object *process_blob(char *unzipped_buffer, size_t total_size) {
-    // 1. Allocate the blob detail structure
-    struct blob_object *blob = malloc(sizeof(struct blob_object));
-    if (!blob) return NULL;
-
-    // 2. Find the end of the header (the first null byte)
-    char *null_byte = memchr(unzipped_buffer, '\0', total_size);
-    if (!null_byte) {
-        free(blob);
-        return NULL;
-    }
-
-	// here the total size written on the blob file may be the size of the actual content instead. 
-    char *data_start = null_byte + 1;
-    size_t header_len = (size_t)(data_start - unzipped_buffer);
-    blob->size = total_size - header_len;
-
-    // 4. Allocate memory for the content and copy it
-    // We use malloc + memcpy because blobs can be binary data
-    blob->data = malloc(blob->size); 
-    if (!blob->data) {
-        free(blob);
-        return NULL;
-    }
-    
-    memcpy(blob->data, data_start, blob->size);
-
-    return blob;
-}
-
-static struct object *process_commit(char *unzipped_buffer, size_t total_size, struct object *obj){
-	return NULL;
-}
-
-static struct object *process_tree(char *unzipped_buffer, size_t total_size, struct object *obj){
-	return NULL;
-}
-
 
 static struct object *process(struct repository *repo,
                               const char *hash_value,
@@ -311,7 +261,8 @@ static struct object *process(struct repository *repo,
         ? HASH1_DIGEST_LENGTH
         : HASH256_DIGEST_LENGTH;
 
-    parse_hex_oid(hash_value, obj->oid.hash, digest_len);
+    strcpy((char *)obj->oid.hash, hash_value);
+
 
     //
     // --- parse payload based on type ---
@@ -335,7 +286,35 @@ static struct object *process(struct repository *repo,
     }
 
     case OBJ_COMMIT:
-        // TODO later
+
+        // get tree id 
+        char *line_start = body;
+        char *line_end = memchr(line_start, '\n', body_len);
+        if (!line_end)
+            goto fail;
+
+        assert(strncmp(line_start, "tree ", 5) == 0);
+        line_start += 5;
+
+        char tree_hash[HASH256_DIGEST_LENGTH] = {0};
+        size_t tree_hash_len = line_end - line_start;
+        if (tree_hash_len >= sizeof(tree_hash))
+            goto fail;
+        strncpy(tree_hash, line_start, tree_hash_len);
+        tree_hash[tree_hash_len] = '\0';
+
+        // get parent id - ma
+        line_start = line_end + 1;
+        // line_end = memchr(line_start, '\n', body + body_len - line_start);
+        
+
+
+
+        struct commit_object *commit = malloc(sizeof(*commit));
+        if (!commit) goto fail;
+        commit->parents = NULL;
+
+        obj->as.commit = commit;
         break;
 
     case OBJ_TREE:

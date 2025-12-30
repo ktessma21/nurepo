@@ -1,87 +1,4 @@
 clear
-ls
-make
-valgrind --version
-clar
-clear
-make valgrind 
-clear
-rm dockerbuild
-rm Dockerfile
-rm run
-clear
-git status
-git add .
-git commit -m "working docker on local mac"
-git config --global user.email "ktessma21@gmail.com"
-git config --global user.name "ktessma21"
-git commit -m "working docker on local mac"
-clear
-git remote
-git push
-exit
-clear
-ls
-ls
-rm c
-rm -rf c
-clear
-git add . 
-git commit -m "edited the message"
-clear
-ls
-git push
-exit
-clear
-make 
-clezf
-clear
-make 
-cear
-clear
-make
-clear
-make
-clear
-make valgrind 
-clear
-make valgrind
-clear
-make valgrind
-clear
-make valgrind
-make valgrind
-make valgrind
-CLEAR
-clear
-make valgrind
-clear
-make
-clear
-make
-clear
-make
-clear
-make
-less
-clear
-clear
-make
-clear
-make
-make
-clear
-make
-clear
-mkae
-make
-clear
-mkae
-make
-clear
-./a.out
-make valgrind
-clear
 make valgrind
 clear
 make valgrind
@@ -438,4 +355,146 @@ clear
 git log
 clear
 make valgrind
+exit
+make valgrind
+clear
+make valgrind
+clear
+make valgrind
+clear
+make valgrind
+clear
+make valgrind
+make valgrind
+clear
+make valgrind
+clear
+make valgrind
+clear
+make valgrind
+clear
+rm -rf blobs
+clear
+make file
+make
+eclear
+clear
+make file
+make
+make valgrind
+eclear
+clear
+make valgrind 
+ls
+clear
+make valgrind
+make valgrind
+clear
+make valgrind 
+clear
+make valgrind 
+clear
+make valgrind
+clear
+make valgrind 
+clear
+make valgrind
+clear
+cp ./ ./test_single_repo/.git/objects/48/5f3c9a6f6ef3b6246eafd4ee26f77069cf6c90
+cp -r ./ ./test_single_repo/.git/objects/48/5f3c9a6f6ef3b6246eafd4ee26f77069cf6c90
+cp -r ./new  ./test_single_repo/.git/objects/48/5f3c9a6f6ef3b6246eafd4ee26f77069cf6c90
+git -C test_single_repo cat-file -t 485f3c9a6f6ef3b6246eafd4ee26f77069cf6c90
+clear
+make valgrind
+clear
+make valgrind 
+clear
+make valgrind
+clear
+make valgrind
+clear
+make valgrind
+clear
+make valgrind
+clar
+clear
+make valgrind
+clear
+make valgrind
+clear
+make valgrind
+clear
+make valgrind
+clear
+make valgrind 
+clear
+make valgrind 
+clear
+make valgrind 
+clear
+make valgrind
+clear
+make valgrind
+ckear
+clear
+make valgrind
+clear
+make valgrind
+clear
+make valgrind
+rm unzipped*
+ls
+clear
+make valgrind
+git add . 
+git commit -m "added object_clone function, no memory leak issues for now"
+clear
+git add . 
+git commit -m "removed unzipped"
+clear
+git log
+clear
+ls
+make valgrind
+make valgrind
+make valgrind
+clear
+rm unzipped*
+make valgrind
+make valgrind
+clear 
+make valgrind
+rm unzipped*
+make valgrind
+clear
+make valgrind 
+cd test_single_repo/
+git add . 
+git status
+clear
+git commit -m "second commit"
+cd ..
+make valgrind
+clear
+make valgrind
+clear
+git add .
+git commit -m "working code, no leak, clean and understandable. STABLE"
+clear
+make
+make valgrind
+clear
+make valgrind 
+clear
+make valgrind
+clear
+make valgrind
+clear
+make valgrind
+make valgrind 
+clear
+make valgrind
+clear
+git status 
+git log
 exit
