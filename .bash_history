@@ -249,8 +249,8 @@ make valgrind
  */
 /* Max hash size we support (SHA-256) */
 #define MAX_OBJECT_ID_LENGTH SHA256_DIGEST_LENGTH
-#define HASH256_DIGEST_LENGTH 32
-#define HASH1_DIGEST_LENGTH 20
+#define HASH256_DIGEST_LENGTH 64
+#define HASH1_DIGEST_LENGTH 40
 struct object_id {
     unsigned char hash[MAX_OBJECT_ID_LENGTH];
 };

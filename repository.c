@@ -19,6 +19,57 @@
 #include "ram.h"
 
 
+static void dump_object_pretty(const char *hash,
+                               const char *header,
+                               const char *body,
+                               size_t body_len)
+{
+    fprintf(stderr, "\n===== %s =====\n", hash);
+
+    fprintf(stderr, "HEADER:\n%s\n\n", header);
+    fprintf(stderr, "BODY:\n");
+
+    size_t i = 0;
+
+    /* print printable prefix */
+    for (; i < body_len; i++) {
+        unsigned char c = (unsigned char)body[i];
+
+        /* printable chars, incl newline + tab */
+        if (c == '\n' || c == '\r' || c == '\t' ||
+            (c >= 0x20 && c <= 0x7E)) {
+
+            fputc(c, stderr);
+        } else {
+            break; /* stop at first non-printable */
+        }
+    }
+
+    fputc('\n', stderr);
+
+    /* if entire body was printable, we're done */
+    if (i == body_len) {
+        fprintf(stderr, "(end; body fully printable)\n");
+        fprintf(stderr, "=================\n");
+        return;
+    }
+
+    /* otherwise report */
+    fprintf(stderr,
+            "<non-printable data begins at offset %zu>\n", i);
+
+    /* hex dump remaining bytes */
+    for (; i < body_len; i++) {
+        fprintf(stderr, "%02x ", (unsigned char)body[i]);
+        if (((i+1) % 16) == 0)
+            fprintf(stderr, "\n");
+    }
+
+    fprintf(stderr, "\n=================\n");
+}
+
+
+
 static void parse_objects(struct repository *repo, struct RAM* memory);
 
 // }
@@ -206,13 +257,14 @@ static struct object *process(struct repository *repo,
                               const char *hash_value,
                               const char *file_path)
 {
+    DEBUG("processing object file: %s", file_path);
     size_t total_size = 0;
     char *unzipped_buffer = decompress_file(file_path, &total_size);
     if (!unzipped_buffer) {
         ERROR("Decompression failed for %s", file_path);
         return NULL;
     }
-
+    
     //
     // --- parse header ---
     //
@@ -223,10 +275,15 @@ static struct object *process(struct repository *repo,
         return NULL;
     }
 
-    size_t header_len = (size_t)(nul - unzipped_buffer);
     char *body = nul + 1;
-    size_t body_len = total_size - header_len - 1;
+    size_t body_len = total_size - (body - unzipped_buffer);
 
+    size_t header_len = (size_t)(nul - unzipped_buffer);
+    char saved_header[256] = {0};
+    snprintf(saved_header, sizeof(saved_header), "%.*s",
+            (int)header_len, unzipped_buffer);
+
+    dump_object_pretty(hash_value, saved_header, body, body_len);
     enum object_type type = get_type_from_header(unzipped_buffer);
     if (type == OBJ_NONE) {
         ERROR("Unknown object type in %s", file_path);
@@ -294,6 +351,7 @@ static struct object *process(struct repository *repo,
     }
 
     free(unzipped_buffer);
+    DEBUG("Processed object %s of type %d", hash_value, type);
     return obj;
 
 fail:
@@ -325,7 +383,7 @@ static void parse_objects(struct repository *repo, struct RAM* memory)
         free(objects_path);
         return;
     }
-
+    DEBUG("opened objects directory: %s", objects_path);
     while ((dir1 = readdir(d)) != NULL) {
 
         const char *prefix = dir1->d_name;

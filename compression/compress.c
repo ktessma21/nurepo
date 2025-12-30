@@ -6,6 +6,18 @@
 
 #define CHUNK 16384
 
+
+static void dump_raw(const char *hash, const char *data, size_t len)
+{
+    char filename[256];
+    snprintf(filename, sizeof(filename), "unzipped_%s.bin", hash);
+
+    FILE *f = fopen(filename, "wb");
+    if (!f) return;
+
+    fwrite(data, 1, len, f);
+    fclose(f);
+}
 /**
  * Decompresses a git object file by path and returns the data in a buffer.
  * @param path: The full path to the git object file.
@@ -75,20 +87,7 @@ char *decompress_file(const char *path, size_t *out_size) {
 
     if (out_size) *out_size = total_out;
 
-    time_t now = time(NULL);
-    struct tm *t = localtime(&now);
-
-    char filename[256];
-    strftime(filename, sizeof(filename),
-            "unzipped_%Y-%m-%d_%H-%M-%S.bin",
-            t);
-
-    FILE *dump = fopen(filename, "wb");
-    if (dump) {
-        fwrite(result, 1, total_out, dump);
-        fclose(dump);
-    }
-
+    
     return result;
 
 fail:

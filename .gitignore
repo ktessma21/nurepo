@@ -2,3 +2,4 @@ test_empty_repo/
 c/
 test_single_repo/
 unzipped*
+.bash_history
