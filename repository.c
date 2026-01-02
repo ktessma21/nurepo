@@ -19,6 +19,44 @@
 #include "compression/compress.h"
 #include "ram.h"
 
+static int parse_header_field(
+    char **cursor,
+    const char *end,
+    const char *prefix,
+    char *out,
+    size_t out_size
+){
+    size_t prefix_len = prefix ? strlen(prefix) : 0;
+
+    char *line_start = *cursor;
+    if (line_start >= end)
+        return -1;
+
+    char *line_end = memchr(line_start, '\n', end - line_start);
+    if (!line_end)
+        return -1;
+
+    /* OPTIONAL FIELD HANDLING */
+    if (prefix_len > 0 &&
+        strncmp(line_start, prefix, prefix_len) != 0)
+    {
+        return 1;   // <-- means "prefix not present"
+    }
+
+    line_start += prefix_len;
+
+    size_t len = line_end - line_start;
+    if (len >= out_size)
+        return -1;
+
+    strncpy(out, line_start, len);
+    out[len] = '\0';
+
+    *cursor = line_end + 1;
+    return 0;
+}
+
+
 
 static void dump_object_pretty(const char *hash,
                                const char *header,
@@ -35,6 +73,9 @@ static void dump_object_pretty(const char *hash,
     /* print printable prefix */
     for (; i < body_len; i++) {
         unsigned char c = (unsigned char)body[i];
+        // if (c == '\n')
+        //     fputc(c, stderr);
+    
 
         /* printable chars, incl newline + tab */
         if (c == '\n' || c == '\r' || c == '\t' ||
@@ -85,9 +126,7 @@ static void parse_objects(struct repository *repo, struct RAM* memory);
 
 
 
-static void process_one_line(const char *line, char *key, char *buf){
 
-}
 
 static int is_porcelain_repo(const char *gitdir)
 {
@@ -287,34 +326,53 @@ static struct object *process(struct repository *repo,
 
     case OBJ_COMMIT:
 
-        // get tree id 
-        char *line_start = body;
-        char *line_end = memchr(line_start, '\n', body_len);
-        if (!line_end)
-            goto fail;
-
-        assert(strncmp(line_start, "tree ", 5) == 0);
-        line_start += 5;
+        char *cursor = body;
+        char *end = body + body_len;
 
         char tree_hash[HASH256_DIGEST_LENGTH] = {0};
-        size_t tree_hash_len = line_end - line_start;
-        if (tree_hash_len >= sizeof(tree_hash))
+        char parent_hash[HASH256_DIGEST_LENGTH] = {0};
+        char author[256] = {0};
+        char commiter[256] = {0};
+        char message[1024] = {0};
+
+        DEBUG("parsing commit object fields");
+        if (parse_header_field(&cursor, end, "tree ", tree_hash, sizeof(tree_hash)) < 0)
             goto fail;
-        strncpy(tree_hash, line_start, tree_hash_len);
-        tree_hash[tree_hash_len] = '\0';
 
-        // get parent id - ma
-        line_start = line_end + 1;
-        // line_end = memchr(line_start, '\n', body + body_len - line_start);
+        DEBUG("parsed tree: %s", tree_hash);
+        if (parse_header_field(&cursor, end, "parent ", parent_hash, sizeof(parent_hash)) < 0)
+            goto fail;
+
+        DEBUG("parsed parent: %s", parent_hash);
+        if (parse_header_field(&cursor, end, "author ", author, sizeof(author)) < 0)
+            goto fail;
+
+        DEBUG("parsed author: %s", author);
+        if (parse_header_field(&cursor, end, "committer ", commiter, sizeof(commiter)) < 0)
+            goto fail;
+
+        DEBUG("parsed committer: %s", commiter);
+        if (parse_header_field(&cursor, end, NULL, message, sizeof(message)) < 0)
+            goto fail;
         
-
-
-
+        DEBUG("parsed message: %s", message);
         struct commit_object *commit = malloc(sizeof(*commit));
         if (!commit) goto fail;
-        commit->parents = NULL;
+        commit->parents = malloc(sizeof(struct object_id));
+        if (!commit->parents) {
+            free(commit);
+            goto fail;
+        }
+        commit->parent_count = 1;
+        commit->tree = (struct object_id){0};
+        strncpy((char *)commit->tree.hash, tree_hash, digest_len);
+        commit->parents[0] = (struct object_id){0};
+        strncpy((char *)commit->parents[0].hash, parent_hash, digest_len);
+        commit->author = strdup(author);
+        commit->message = strdup(message);    
 
         obj->as.commit = commit;
+
         break;
 
     case OBJ_TREE:
