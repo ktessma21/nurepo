@@ -19,7 +19,7 @@
 #include "compression/compress.h"
 #include "ram.h"
 
-static int parse_header_field(
+static int parse_one_line_of_commit_object(
     char **cursor,
     const char *end,
     const char *prefix,
@@ -166,7 +166,7 @@ int repo_init_gitdir(struct repository *repo, const char *gitdir)
 	if (!gitdir)
 		return -1;
 
-	if (!is_git_directory(gitdir))
+	if (!is_git_directory(gitdir)) // if it is not a git directory. create the git directory
 		return -1;
 
 	repo->gitdir = strdup(gitdir);
@@ -336,23 +336,23 @@ static struct object *process(struct repository *repo,
         char message[1024] = {0};
 
         DEBUG("parsing commit object fields");
-        if (parse_header_field(&cursor, end, "tree ", tree_hash, sizeof(tree_hash)) < 0)
+        if (parse_one_line_of_commit_object(&cursor, end, "tree ", tree_hash, sizeof(tree_hash)) < 0)
             goto fail;
 
         DEBUG("parsed tree: %s", tree_hash);
-        if (parse_header_field(&cursor, end, "parent ", parent_hash, sizeof(parent_hash)) < 0)
+        if (parse_one_line_of_commit_object(&cursor, end, "parent ", parent_hash, sizeof(parent_hash)) < 0)
             goto fail;
 
         DEBUG("parsed parent: %s", parent_hash);
-        if (parse_header_field(&cursor, end, "author ", author, sizeof(author)) < 0)
+        if (parse_one_line_of_commit_object(&cursor, end, "author ", author, sizeof(author)) < 0)
             goto fail;
 
         DEBUG("parsed author: %s", author);
-        if (parse_header_field(&cursor, end, "committer ", commiter, sizeof(commiter)) < 0)
+        if (parse_one_line_of_commit_object(&cursor, end, "committer ", commiter, sizeof(commiter)) < 0)
             goto fail;
 
         DEBUG("parsed committer: %s", commiter);
-        if (parse_header_field(&cursor, end, NULL, message, sizeof(message)) < 0)
+        if (parse_one_line_of_commit_object(&cursor, end, NULL, message, sizeof(message)) < 0)
             goto fail;
         
         DEBUG("parsed message: %s", message);
@@ -377,6 +377,104 @@ static struct object *process(struct repository *repo,
 
     case OBJ_TREE:
         // TODO later
+        char *tree_cursor = body;
+        char *tree_end = body + body_len;
+
+        obj->as.tree = malloc(sizeof(struct tree_object));
+        if (!obj->as.tree) goto fail;
+
+        struct tree_object *tree = obj->as.tree;
+        tree->entry_count = 0;
+        tree->entries = NULL;
+
+        while (tree_cursor < tree_end) {
+
+            DEBUG("parsing tree object fields");
+
+            /* ---- parse mode ---- */
+
+            char *mode_start = tree_cursor;
+
+            char *sp = memchr(mode_start, ' ', tree_end - mode_start);
+            if (!sp)
+                goto fail;
+
+            size_t mode_len = sp - mode_start;
+
+            enum object_type entry_type;
+
+            if (mode_len == 5 && strncmp(mode_start, "40000", 5) == 0)
+                entry_type = OBJ_TREE;
+            else if (mode_len == 6 && strncmp(mode_start, "100644", 6) == 0)
+                entry_type = OBJ_BLOB;
+            else
+                goto fail;
+
+            tree_cursor = sp + 1;   /* skip past space after mode */
+
+
+            /* ---- parse name ---- */
+
+            char *name_start = tree_cursor;
+
+            char *name_end = memchr(name_start, '\0', tree_end - name_start);
+            if (!name_end)
+                goto fail;
+
+            size_t name_len = name_end - name_start;
+
+            char name[name_len + 1];
+            memcpy(name, name_start, name_len);
+            name[name_len] = '\0';
+
+            tree_cursor = name_end + 1;   /* skip null terminator */
+
+            DEBUG("parsed tree entry name: %s", name);
+
+
+            /* ---- parse raw hash (binary) ---- */
+
+            size_t hash_len = digest_len;   /* e.g., 20 for SHA-1 */
+
+            if (tree_cursor + hash_len > tree_end)
+                goto fail;
+
+
+            /* ---- store entry ---- */
+            tree->entry_count++;
+
+            tree->entries =
+                realloc(tree->entries,
+                        tree->entry_count * sizeof(struct tree_entry));
+
+            if (!tree->entries) {
+                goto fail;
+            }
+
+            struct tree_entry *tree_entry =
+                &tree->entries[tree->entry_count - 1];
+
+            tree_entry->name = strdup(name);
+            tree_entry->type = entry_type;
+            memset(&tree_entry->oid, 0, sizeof(tree_entry->oid));
+            memcpy(tree_entry->oid.hash, tree_cursor, hash_len);
+
+            tree_cursor += hash_len;
+
+            DEBUG("parsed tree entry hash (first 4 bytes): %02x%02x%02x%02x",
+                tree_entry->oid.hash[0], tree_entry->oid.hash[1],
+                tree_entry->oid.hash[2], tree_entry->oid.hash[3]);
+            
+        }
+        // char *cursor = body;
+        // char *end = body + body_len;
+
+        // char tree_hash[HASH256_DIGEST_LENGTH] = {0};
+        // char parent_hash[HASH256_DIGEST_LENGTH] = {0};
+        // char author[256] = {0};
+        // char commiter[256] = {0};
+        // char message[1024] = {0};
+        
         break;
 
     case OBJ_TAG:
