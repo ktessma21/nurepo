@@ -19,6 +19,44 @@
 #include "compression/compress.h"
 #include "ram.h"
 
+static int parse_one_line_of_commit_object(
+    char **cursor,
+    const char *end,
+    const char *prefix,
+    char *out,
+    size_t out_size
+){
+    size_t prefix_len = prefix ? strlen(prefix) : 0;
+
+    char *line_start = *cursor;
+    if (line_start >= end)
+        return -1;
+
+    char *line_end = memchr(line_start, '\n', end - line_start);
+    if (!line_end)
+        return -1;
+
+    /* OPTIONAL FIELD HANDLING */
+    if (prefix_len > 0 &&
+        strncmp(line_start, prefix, prefix_len) != 0)
+    {
+        return 1;   // <-- means "prefix not present"
+    }
+
+    line_start += prefix_len;
+
+    size_t len = line_end - line_start;
+    if (len >= out_size)
+        return -1;
+
+    strncpy(out, line_start, len);
+    out[len] = '\0';
+
+    *cursor = line_end + 1;
+    return 0;
+}
+
+
 
 static void dump_object_pretty(const char *hash,
                                const char *header,
@@ -35,6 +73,9 @@ static void dump_object_pretty(const char *hash,
     /* print printable prefix */
     for (; i < body_len; i++) {
         unsigned char c = (unsigned char)body[i];
+        // if (c == '\n')
+        //     fputc(c, stderr);
+    
 
         /* printable chars, incl newline + tab */
         if (c == '\n' || c == '\r' || c == '\t' ||
@@ -85,9 +126,7 @@ static void parse_objects(struct repository *repo, struct RAM* memory);
 
 
 
-static void process_one_line(const char *line, char *key, char *buf){
 
-}
 
 static int is_porcelain_repo(const char *gitdir)
 {
@@ -127,7 +166,7 @@ int repo_init_gitdir(struct repository *repo, const char *gitdir)
 	if (!gitdir)
 		return -1;
 
-	if (!is_git_directory(gitdir))
+	if (!is_git_directory(gitdir)) // if it is not a git directory. create the git directory
 		return -1;
 
 	repo->gitdir = strdup(gitdir);
@@ -287,38 +326,155 @@ static struct object *process(struct repository *repo,
 
     case OBJ_COMMIT:
 
-        // get tree id 
-        char *line_start = body;
-        char *line_end = memchr(line_start, '\n', body_len);
-        if (!line_end)
-            goto fail;
-
-        assert(strncmp(line_start, "tree ", 5) == 0);
-        line_start += 5;
+        char *cursor = body;
+        char *end = body + body_len;
 
         char tree_hash[HASH256_DIGEST_LENGTH] = {0};
-        size_t tree_hash_len = line_end - line_start;
-        if (tree_hash_len >= sizeof(tree_hash))
+        char parent_hash[HASH256_DIGEST_LENGTH] = {0};
+        char author[256] = {0};
+        char commiter[256] = {0};
+        char message[1024] = {0};
+
+        DEBUG("parsing commit object fields");
+        if (parse_one_line_of_commit_object(&cursor, end, "tree ", tree_hash, sizeof(tree_hash)) < 0)
             goto fail;
-        strncpy(tree_hash, line_start, tree_hash_len);
-        tree_hash[tree_hash_len] = '\0';
 
-        // get parent id - ma
-        line_start = line_end + 1;
-        // line_end = memchr(line_start, '\n', body + body_len - line_start);
+        DEBUG("parsed tree: %s", tree_hash);
+        if (parse_one_line_of_commit_object(&cursor, end, "parent ", parent_hash, sizeof(parent_hash)) < 0)
+            goto fail;
+
+        DEBUG("parsed parent: %s", parent_hash);
+        if (parse_one_line_of_commit_object(&cursor, end, "author ", author, sizeof(author)) < 0)
+            goto fail;
+
+        DEBUG("parsed author: %s", author);
+        if (parse_one_line_of_commit_object(&cursor, end, "committer ", commiter, sizeof(commiter)) < 0)
+            goto fail;
+
+        DEBUG("parsed committer: %s", commiter);
+        if (parse_one_line_of_commit_object(&cursor, end, NULL, message, sizeof(message)) < 0)
+            goto fail;
         
-
-
-
+        DEBUG("parsed message: %s", message);
         struct commit_object *commit = malloc(sizeof(*commit));
         if (!commit) goto fail;
-        commit->parents = NULL;
+        commit->parents = malloc(sizeof(struct object_id));
+        if (!commit->parents) {
+            free(commit);
+            goto fail;
+        }
+        commit->parent_count = 1;
+        commit->tree = (struct object_id){0};
+        strncpy((char *)commit->tree.hash, tree_hash, digest_len);
+        commit->parents[0] = (struct object_id){0};
+        strncpy((char *)commit->parents[0].hash, parent_hash, digest_len);
+        commit->author = strdup(author);
+        commit->message = strdup(message);    
 
         obj->as.commit = commit;
+
         break;
 
     case OBJ_TREE:
         // TODO later
+        char *tree_cursor = body;
+        char *tree_end = body + body_len;
+
+        obj->as.tree = malloc(sizeof(struct tree_object));
+        if (!obj->as.tree) goto fail;
+
+        struct tree_object *tree = obj->as.tree;
+        tree->entry_count = 0;
+        tree->entries = NULL;
+
+        while (tree_cursor < tree_end) {
+
+            DEBUG("parsing tree object fields");
+
+            /* ---- parse mode ---- */
+
+            char *mode_start = tree_cursor;
+
+            char *sp = memchr(mode_start, ' ', tree_end - mode_start);
+            if (!sp)
+                goto fail;
+
+            size_t mode_len = sp - mode_start;
+
+            enum object_type entry_type;
+
+            if (mode_len == 5 && strncmp(mode_start, "40000", 5) == 0)
+                entry_type = OBJ_TREE;
+            else if (mode_len == 6 && strncmp(mode_start, "100644", 6) == 0)
+                entry_type = OBJ_BLOB;
+            else
+                goto fail;
+
+            tree_cursor = sp + 1;   /* skip past space after mode */
+
+
+            /* ---- parse name ---- */
+
+            char *name_start = tree_cursor;
+
+            char *name_end = memchr(name_start, '\0', tree_end - name_start);
+            if (!name_end)
+                goto fail;
+
+            size_t name_len = name_end - name_start;
+
+            char name[name_len + 1];
+            memcpy(name, name_start, name_len);
+            name[name_len] = '\0';
+
+            tree_cursor = name_end + 1;   /* skip null terminator */
+
+            DEBUG("parsed tree entry name: %s", name);
+
+
+            /* ---- parse raw hash (binary) ---- */
+
+            size_t hash_len = digest_len;   /* e.g., 20 for SHA-1 */
+
+            if (tree_cursor + hash_len > tree_end)
+                goto fail;
+
+
+            /* ---- store entry ---- */
+            tree->entry_count++;
+
+            tree->entries =
+                realloc(tree->entries,
+                        tree->entry_count * sizeof(struct tree_entry));
+
+            if (!tree->entries) {
+                goto fail;
+            }
+
+            struct tree_entry *tree_entry =
+                &tree->entries[tree->entry_count - 1];
+
+            tree_entry->name = strdup(name);
+            tree_entry->type = entry_type;
+            memset(&tree_entry->oid, 0, sizeof(tree_entry->oid));
+            memcpy(tree_entry->oid.hash, tree_cursor, hash_len);
+
+            tree_cursor += hash_len;
+
+            DEBUG("parsed tree entry hash (first 4 bytes): %02x%02x%02x%02x",
+                tree_entry->oid.hash[0], tree_entry->oid.hash[1],
+                tree_entry->oid.hash[2], tree_entry->oid.hash[3]);
+            
+        }
+        // char *cursor = body;
+        // char *end = body + body_len;
+
+        // char tree_hash[HASH256_DIGEST_LENGTH] = {0};
+        // char parent_hash[HASH256_DIGEST_LENGTH] = {0};
+        // char author[256] = {0};
+        // char commiter[256] = {0};
+        // char message[1024] = {0};
+        
         break;
 
     case OBJ_TAG:
