@@ -100,3 +100,65 @@ fail:
     object_free(dst);
     return NULL;
 }
+
+static int validate_blob(const struct blob_object *blob)
+{
+    return blob != NULL && blob->data != NULL;
+}
+
+static int validate_tree(const struct tree_object *tree)
+{
+    if (tree == NULL || tree->entries == NULL || tree->entry_count == 0)
+        return 0;
+
+    for (size_t i = 0; i < tree->entry_count; i++) {
+        if (tree->entries[i].name == NULL)
+            return 0;
+    }
+
+    return 1;
+}
+
+static int validate_commit(const struct commit_object *commit)
+{
+    if (commit == NULL || commit->author == NULL || commit->message == NULL)
+        return 0;
+
+    /* Parents array must match parent_count */
+    if ((commit->parent_count > 0 && commit->parents == NULL) ||
+        (commit->parent_count == 0 && commit->parents != NULL))
+        return 0;
+
+    return 1;
+}
+
+static int validate_tag(const struct tag_object *tag)
+{
+    return tag != NULL &&
+           tag->tag_name != NULL &&
+           tag->tagger != NULL &&
+           tag->message != NULL;
+}
+
+int confirm_object_is_valid(const struct object *obj)
+{
+    if (obj == NULL)
+        return 0;
+
+    switch (obj->type) {
+    case OBJ_BLOB:
+        return validate_blob(obj->as.blob);
+
+    case OBJ_TREE:
+        return validate_tree(obj->as.tree);
+
+    case OBJ_COMMIT:
+        return validate_commit(obj->as.commit);
+
+    case OBJ_TAG:
+        return validate_tag(obj->as.tag);
+
+    default:
+        return 0;
+    }
+}

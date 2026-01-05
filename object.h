@@ -121,5 +121,5 @@ void tag_free(struct tag_object *t);
 
 struct object *object_clone(const struct object *src);
 
-
+int confirm_object_is_valid(const struct object *obj);
 #endif
