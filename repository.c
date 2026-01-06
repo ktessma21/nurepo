@@ -211,11 +211,20 @@ int repo_init(struct repository *repo,
 
     /* Validate objects in RAM */
     for (int i = 0; i < memory->size; i++) {
-        struct RAM_VALUE value = memory->cells[i];
-        if (!confirm_object_is_valid(value.obj_value)) {
-            ERROR("Invalid object detected in RAM for variable %s",
-                  memory->map[i].varname);
-        }
+
+        struct RAM_VALUE* value = ram_read_cell_by_addr(memory, i);
+
+        printf("\nVALIDATING %s type=%d\n",
+            memory->map[i].varname,
+            value -> obj_value ? value -> obj_value->type : -1);
+
+        printf("ptr blob=%p tree=%p commit=%p\n",
+            value -> obj_value ? value->obj_value->as.blob : NULL,
+            value -> obj_value ? value -> obj_value->as.tree : NULL,
+            value -> obj_value ? value -> obj_value->as.commit : NULL);
+
+        assert(confirm_object_is_valid(value -> obj_value) != 0);
+        ram_free_value(value);
     }
 
     ram_destroy(memory);
@@ -260,6 +269,11 @@ static int parse_blob(struct object *obj, const char *body, size_t body_len)
         return -1;
 
     blob->size = body_len;
+    if (blob->size <= 0){
+        obj->as.blob = blob;
+        blob->data = NULL;
+        return 0;
+    } 
     blob->data = malloc(body_len);
     if (!blob->data) {
         free(blob);
@@ -305,6 +319,10 @@ static int parse_commit(struct object *obj, const char *body, size_t body_len,
         return -1;
     DEBUG("parsed committer: %s", committer);
 
+    char *line_end = memchr(cursor, '\n', end - cursor);
+    cursor = line_end + 1;
+    DEBUG("Skipped a line.");
+    
     if (parse_one_line_of_commit_object(&cursor, end, NULL, message,
                                        sizeof(message)) < 0)
         return -1;
@@ -329,6 +347,8 @@ static int parse_commit(struct object *obj, const char *body, size_t body_len,
     commit->message = strdup(message);
 
     obj->as.commit = commit;
+
+    assert(confirm_object_is_valid(obj) != 0);
     return 0;
 }
 
@@ -512,6 +532,7 @@ static struct object *process(struct repository *repo,
 
     free(unzipped_buffer);
     DEBUG("Processed object %s of type %d", hash_value, type);
+    assert(obj != NULL);
     return obj;
 }
 
@@ -600,11 +621,16 @@ static void parse_objects(struct repository *repo, struct RAM *memory)
                 value.value_type = object_type_to_ram_value_type(obj->type);
                 value.obj_value = obj;
 
+                assert(value.obj_value != NULL);
+
                 if (!ram_write_cell_by_name(memory, value, hash_value)) {
                     ERROR("ram_write_cell_by_name failed for %s", hash_value);
                 }
-
                 object_free(obj); /* RAM now owns its own clone */
+
+                assert(ram_read_cell_by_name(memory, hash_value) -> obj_value != NULL);
+
+                
             }
 
             free(hash_value);

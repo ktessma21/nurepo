@@ -82,6 +82,15 @@ struct commit_object {
     char *message;
 };
 
+// struct commit_object {
+//     char *author;
+//     char *message;
+//     size_t parent_count;
+//     struct commit_object **parents;
+//     struct tree_object *tree;   // assume shared
+// };
+
+
 /* ---------- Tag ---------- */
 struct tag_object {
     struct object_id target;

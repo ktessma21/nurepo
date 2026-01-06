@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include "object.h"
 #include <string.h>
+#include "log.h"
 
 void blob_free(struct blob_object *b) {
     if (!b) return;
@@ -19,7 +20,8 @@ void tree_free(struct tree_object *t) {
 
 void commit_free(struct commit_object *c) {
     if (!c) return;
-    free(c->parents);
+    if (c->parent_count > 0)
+        free(c->parents);
     free(c->author);
     free(c->message);
     free(c);
@@ -80,7 +82,21 @@ struct object *object_clone(const struct object *src)
 
     case OBJ_COMMIT:
         /* TODO: deep copy commit fields */
+        dst->as.commit = malloc(sizeof(struct commit_object));
+        if (!dst->as.commit)
+            goto fail;
+        
+        dst->as.commit->author = strdup(src->as.commit->author);
+        dst->as.commit->message = strdup(src->as.commit->message);
+        dst->as.commit->parent_count = src->as.commit->parent_count;
+        dst->as.commit->parents = malloc(src->as.commit->parent_count * sizeof(struct commit_object *));
+        memcpy(dst->as.commit->parents,
+            src->as.commit->parents,
+            src->as.commit->parent_count * sizeof(struct commit_object *));
+        dst->as.commit->tree = src->as.commit->tree;
         break;
+     
+        
 
     case OBJ_TREE:
         /* TODO */
@@ -103,8 +119,27 @@ fail:
 
 static int validate_blob(const struct blob_object *blob)
 {
-    return blob != NULL && blob->data != NULL;
+    if (blob == NULL){
+        printf("failed on blob is NULL");
+        return 0;
+    }
+        
+
+    if (blob->size == 0){
+        printf("blob size was 0");
+        return 1;
+    }
+         // empty blob is valid
+    if (blob->data == NULL){
+        printf("failed terribly");
+        return 0;
+    }
+        
+    return 1;
+    
+    
 }
+
 
 static int validate_tree(const struct tree_object *tree)
 {
@@ -123,12 +158,12 @@ static int validate_commit(const struct commit_object *commit)
 {
     if (commit == NULL || commit->author == NULL || commit->message == NULL)
         return 0;
-
+    // DEBUG("validate commit passed commit/commit->autor/commit->message");
     /* Parents array must match parent_count */
     if ((commit->parent_count > 0 && commit->parents == NULL) ||
         (commit->parent_count == 0 && commit->parents != NULL))
         return 0;
-
+    // DEBUG("validate commit passed parental control");
     return 1;
 }
 
