@@ -87,7 +87,8 @@ struct commit_object {
 //     char *message;
 //     size_t parent_count;
 //     struct commit_object **parents;
-//     struct tree_object *tree;   // assume shared
+//     struct object_id tree;   // assume shared
+//     // struct tree_object *tree; this way we can easily build the graph 
 // };
 
 
